@@ -1,75 +1,96 @@
-# React + TypeScript + Vite
+<p align="center">
+  <img src="https://i.imgur.com/4n2p0l.png" alt="Novagram Logo" width="120">
+</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<h1 align="center">✨ Novagram</h1>
 
-Currently, two official plugins are available:
+<p align="center">
+  <strong>Новая звезда в мире общения. Быстро. Свободно. Твоё.</strong>
+</p>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+<p align="center">
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
+  <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" />
+  <img src="https://img.shields.io/badge/Zustand-000000?style=for-the-badge&logo=react&logoColor=white" />
+</p>
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 О проекте
 
-## Expanding the ESLint configuration
+**Novagram** — это современный, быстрый и безопасный мессенджер, созданный для тех, кто ценит скорость и свободу общения. Проект построен на стеке **React + TypeScript + Supabase** и использует WebSocket-соединения для мгновенной доставки сообщений.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Проект родился как дипломный/курсовой проект, но перерос в полноценное приложение для личного общения. **Разработан с душой.**
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## ✨ Особенности
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- ⚡ **Реальное время** — сообщения доставляются мгновенно через Supabase Realtime
+- 🔐 **Безопасная авторизация** — вход по email и паролю (Supabase Auth)
+- 👤 **Профили пользователей** — имена, статусы и аватарки
+- 🟢 **Онлайн-статус** — видно, кто сейчас в сети
+- ✍️ **"Печатает..."** — индикатор набора текста
+- 🗑️ **Управление чатами** — создание, удаление, переключение
+- 📱 **Адаптивный дизайн** — Tailwind CSS + кастомные стили
+- 🚀 **Готов к деплою** — Vercel + Supabase
 
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ Технологический стек
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Категория | Технологии |
+|-----------|------------|
+| **Фронтенд** | React, TypeScript, Vite |
+| **Стили** | Tailwind CSS |
+| **База данных** | Supabase (PostgreSQL) |
+| **Realtime** | Supabase Realtime (WebSockets) |
+| **Аутентификация** | Supabase Auth |
+| **Управление состоянием** | Zustand |
+| **Роутинг** | React Router DOM |
+| **Деплой** | Vercel |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
 
-```
+## 🏗️ Архитектура проекта
+novagram/
+├── src/
+│ ├── api/ # Supabase клиент и запросы к БД
+│ ├── components/ # UI-компоненты (Button, Input, Avatar)
+│ ├── hooks/ # Кастомные хуки (useChats, usePresence, useRealtime)
+│ ├── pages/ # Страницы (ChatPage, LoginPage, RegisterPage)
+│ ├── store/ # Zustand-сторы (authStore)
+│ ├── types/ # TypeScript-интерфейсы
+│ └── utils/ # Утилиты (форматирование даты и др.)
+├── public/ # Статические файлы
+├── .env.local # Переменные окружения (не в репозитории!)
+├── vercel.json # Настройки деплоя для Vercel
+└── package.json # Зависимости и скрипты
+---
+
+## 🚀 Быстрый старт
+
+### 1. Клонируй репозиторий
+
+```bash
+git clone https://github.com/your-username/novagram.git
+cd novagram
+2. Установи зависимости
+bash
+npm install
+3. Настрой переменные окружения
+Создай файл .env.local в корне проекта и добавь:
+
+env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+4. Запусти проект в режиме разработки
+bash
+npm run dev
+Открой http://localhost:5173 в браузере.
+📄 Лицензия
+Проект распространяется под лицензией MIT. Вы можете свободно использовать, изменять и распространять этот код.
+<p align="center"> Сделано с ❤️ для тех, кто ценит свободу общения. </p>
