@@ -111,14 +111,14 @@ export const ChatPage = () => {
               }`}
               onClick={() => setSelectedChat(chat)}
             >
-              <div className="w-12 h-12 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
-                {chat.name?.[0] || 'Ч'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between">
-                  <span className="font-medium">{chat.name || 'Без названия'}</span>
-                </div>
-              </div>
+<div className="w-12 h-12 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
+  {chat.displayName?.[0] || 'Ч'}
+</div>
+<div className="flex-1 min-w-0">
+  <div className="flex justify-between">
+    <span className="font-medium">{chat.displayName || 'Чат'}</span>
+  </div>
+</div>
             </li>
           ))}
         </ul>

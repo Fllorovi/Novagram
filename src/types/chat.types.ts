@@ -3,6 +3,7 @@ export interface Chat {
   name: string | null;
   is_private: boolean;
   created_at: string;
+  displayName?: string;
 }
 
 export interface Message {
