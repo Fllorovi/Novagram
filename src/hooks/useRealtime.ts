@@ -43,9 +43,16 @@ export const useRealtimeMessages = (chatId: number | null) => {
           filter: `chat_id=eq.${chatId}`,
         },
         (payload) => {
-          // Добавляем новое сообщение в список
           const newMessage = payload.new as Message;
-          setMessages((prev) => [...prev, newMessage]);
+          
+          // ✅ Защита от дублирования: проверяем, есть ли уже такое сообщение
+          setMessages((prev) => {
+            const exists = prev.some((msg) => msg.id === newMessage.id);
+            if (exists) {
+              return prev; // Не добавляем дубликат
+            }
+            return [...prev, newMessage];
+          });
         }
       )
       .subscribe();
