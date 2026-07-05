@@ -50,4 +50,28 @@ export const chatsApi = {
     if (error) throw error;
     return data;
   },
+  // Удалить чат и все связанные данные
+deleteChat: async (chatId: number) => {
+  // Удаляем сообщения (каскадное удаление сработает, если есть внешние ключи)
+  // Но на всякий случай удалим вручную
+  const { error: err1 } = await supabase
+    .from('messages')
+    .delete()
+    .eq('chat_id', chatId);
+  if (err1) throw err1;
+
+  // Удаляем участников
+  const { error: err2 } = await supabase
+    .from('chat_participants')
+    .delete()
+    .eq('chat_id', chatId);
+  if (err2) throw err2;
+
+  // Удаляем сам чат
+  const { error: err3 } = await supabase
+    .from('chats')
+    .delete()
+    .eq('id', chatId);
+  if (err3) throw err3;
+},
 };

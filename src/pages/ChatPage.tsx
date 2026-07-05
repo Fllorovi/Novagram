@@ -4,17 +4,17 @@ import { useChats } from '../hooks/useChats';
 import { useRealtimeMessages } from '../hooks/useRealtime';
 import { usePresence } from '../hooks/usePresence';
 import { chatsApi } from '../api/chatsApi';
-import { supabase } from '../api/supabaseClient'; // 👈 НОВОЕ: импортируем supabase
+import { supabase } from '../api/supabaseClient';
 import type { Chat, Message } from '../types/chat.types';
 
 export const ChatPage = () => {
   const { user, signOut } = useAuthStore();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const { chats, loading: chatsLoading } = useChats(user?.id || null);
+  const { chats, loading: chatsLoading, setChats } = useChats(user?.id || null);
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
   
-  // 👇 НОВОЕ: состояние для собеседника
+  // Состояние для собеседника
   const [otherUser, setOtherUser] = useState<{ username: string | null; avatar_url: string | null } | null>(null);
 
   const { onlineUsers, isTyping, sendTyping } = usePresence(
@@ -24,18 +24,18 @@ export const ChatPage = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Прокрутка вниз при обновлении сообщений
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // 👇 НОВОЕ: загружаем собеседника при выборе чата
+  // Загружаем собеседника при выборе чата
   useEffect(() => {
     if (!selectedChat || !user) return;
 
     const loadOtherUser = async () => {
-      // Получаем всех участников чата
       const { data: participants, error: err1 } = await supabase
         .from('chat_participants')
         .select('user_id')
@@ -43,7 +43,6 @@ export const ChatPage = () => {
 
       if (err1 || !participants) return;
 
-      // Находим ID собеседника (не текущего пользователя)
       const otherUserId = participants
         .map((p) => p.user_id)
         .find((id) => id !== user.id);
@@ -53,7 +52,6 @@ export const ChatPage = () => {
         return;
       }
 
-      // Получаем данные собеседника из таблицы profiles
       const { data: profile, error: err2 } = await supabase
         .from('profiles')
         .select('username, avatar_url')
@@ -91,6 +89,22 @@ export const ChatPage = () => {
     window.location.href = '/login';
   };
 
+  // Удаление чата
+  const handleDeleteChat = async (chatId: number, chatName: string) => {
+    if (window.confirm(`Удалить чат "${chatName || 'Чат'}"?`)) {
+      try {
+        await chatsApi.deleteChat(chatId);
+        setChats((prev) => prev.filter((c) => c.id !== chatId));
+        if (selectedChat?.id === chatId) {
+          setSelectedChat(null);
+        }
+      } catch (error) {
+        console.error('Ошибка удаления чата:', error);
+        alert('Не удалось удалить чат.');
+      }
+    }
+  };
+
   if (chatsLoading) {
     return <div className="flex items-center justify-center h-screen">Загрузка чатов...</div>;
   }
@@ -110,15 +124,19 @@ export const ChatPage = () => {
                 selectedChat?.id === chat.id ? 'bg-blue-50' : ''
               }`}
               onClick={() => setSelectedChat(chat)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                handleDeleteChat(chat.id, chat.displayName || 'Чат');
+              }}
             >
-<div className="w-12 h-12 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
-  {chat.displayName?.[0] || 'Ч'}
-</div>
-<div className="flex-1 min-w-0">
-  <div className="flex justify-between">
-    <span className="font-medium">{chat.displayName || 'Чат'}</span>
-  </div>
-</div>
+              <div className="w-12 h-12 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
+                {chat.displayName?.[0] || 'Ч'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between">
+                  <span className="font-medium">{chat.displayName || 'Чат'}</span>
+                </div>
+              </div>
             </li>
           ))}
         </ul>
@@ -137,8 +155,13 @@ export const ChatPage = () => {
       <main className="flex-1 flex flex-col">
         {selectedChat ? (
           <>
-            {/* 👇 НОВОЕ: шапка чата с именем собеседника */}
-            <header className="p-4 bg-white border-b border-gray-200 flex items-center">
+            <header
+              className="p-4 bg-white border-b border-gray-200 flex items-center"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                handleDeleteChat(selectedChat.id, otherUser?.username || 'Чат');
+              }}
+            >
               <div className="w-10 h-10 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
                 {otherUser?.username?.[0] || 'Ч'}
               </div>
