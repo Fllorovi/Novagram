@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://i.imgur.com/4n2p0l.png" alt="Novagram Logo" width="120">
-</p>
+
 
 <h1 align="center">✨ Novagram</h1>
 
