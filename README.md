@@ -73,6 +73,8 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 bash
 npm run dev
 Открой http://localhost:5173 в браузере.
+
+
 📄 Лицензия
 Проект распространяется под лицензией MIT. Вы можете свободно использовать, изменять и распространять этот код.
 
