@@ -53,7 +53,6 @@
 
 ---
 
-## 🏗️ Архитектура проекта
 ![Архитектура Novagram](./public/images/architecture.jpg)
 ---
 
