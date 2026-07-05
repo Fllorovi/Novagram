@@ -54,20 +54,7 @@
 ---
 
 ## 🏗️ Архитектура проекта
-FRONTEND (React + TS)
-├── Pages (ChatPage, LoginPage)
-├── Components (Button, Input, Avatar)
-├── Hooks (useChats, usePresence, useRealtime)
-├── Store (authStore)
-├── API (Supabase Client)
-└── Router (react-router-dom)
-        │
-        ▼
-BACKEND (Supabase)
-├── PostgreSQL (chats, messages, profiles)
-├── Realtime (WebSockets)
-├── Auth (JWT)
-└── Storage (аватарки, файлы)
+![Архитектура Novagram](./public/images/architecture.jpg)
 ---
 
 ## 🚀 Быстрый старт
