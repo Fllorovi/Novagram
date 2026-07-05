@@ -54,19 +54,20 @@
 ---
 
 ## 🏗️ Архитектура проекта
-novagram/
-├── src/
-│ ├── api/ # Supabase клиент и запросы к БД
-│ ├── components/ # UI-компоненты (Button, Input, Avatar)
-│ ├── hooks/ # Кастомные хуки (useChats, usePresence, useRealtime)
-│ ├── pages/ # Страницы (ChatPage, LoginPage, RegisterPage)
-│ ├── store/ # Zustand-сторы (authStore)
-│ ├── types/ # TypeScript-интерфейсы
-│ └── utils/ # Утилиты (форматирование даты и др.)
-├── public/ # Статические файлы
-├── .env.local # Переменные окружения (не в репозитории!)
-├── vercel.json # Настройки деплоя для Vercel
-└── package.json # Зависимости и скрипты
+FRONTEND (React + TS)
+├── Pages (ChatPage, LoginPage)
+├── Components (Button, Input, Avatar)
+├── Hooks (useChats, usePresence, useRealtime)
+├── Store (authStore)
+├── API (Supabase Client)
+└── Router (react-router-dom)
+        │
+        ▼
+BACKEND (Supabase)
+├── PostgreSQL (chats, messages, profiles)
+├── Realtime (WebSockets)
+├── Auth (JWT)
+└── Storage (аватарки, файлы)
 ---
 
 ## 🚀 Быстрый старт
