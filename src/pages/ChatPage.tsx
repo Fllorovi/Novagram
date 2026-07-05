@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useChats } from '../hooks/useChats';
 import { useRealtimeMessages } from '../hooks/useRealtime';
-import { usePresence } from '../hooks/usePresence'; // 👈 НОВОЕ: импортируем хук для Presence
+import { usePresence } from '../hooks/usePresence';
 import { chatsApi } from '../api/chatsApi';
+import { supabase } from '../api/supabaseClient'; // 👈 НОВОЕ: импортируем supabase
 import type { Chat, Message } from '../types/chat.types';
 
 export const ChatPage = () => {
@@ -12,22 +13,66 @@ export const ChatPage = () => {
   const { chats, loading: chatsLoading } = useChats(user?.id || null);
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
+  
+  // 👇 НОВОЕ: состояние для собеседника
+  const [otherUser, setOtherUser] = useState<{ username: string | null; avatar_url: string | null } | null>(null);
 
-  // 👇 НОВОЕ: подключаем хук Presence для выбранного чата
   const { onlineUsers, isTyping, sendTyping } = usePresence(
     selectedChat?.id || null,
     user?.id || null
   );
 
-  // Реф для контейнера сообщений
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Прокрутка вниз при обновлении сообщений (загрузка, отправка, приём)
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // 👇 НОВОЕ: загружаем собеседника при выборе чата
+  useEffect(() => {
+    if (!selectedChat || !user) return;
+
+    const loadOtherUser = async () => {
+      // Получаем всех участников чата
+      const { data: participants, error: err1 } = await supabase
+        .from('chat_participants')
+        .select('user_id')
+        .eq('chat_id', selectedChat.id);
+
+      if (err1 || !participants) return;
+
+      // Находим ID собеседника (не текущего пользователя)
+      const otherUserId = participants
+        .map((p) => p.user_id)
+        .find((id) => id !== user.id);
+
+      if (!otherUserId) {
+        setOtherUser(null);
+        return;
+      }
+
+      // Получаем данные собеседника из таблицы profiles
+      const { data: profile, error: err2 } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', otherUserId)
+        .single();
+
+      if (err2 || !profile) {
+        setOtherUser(null);
+        return;
+      }
+
+      setOtherUser({
+        username: profile.username || 'Без имени',
+        avatar_url: profile.avatar_url || null,
+      });
+    };
+
+    loadOtherUser();
+  }, [selectedChat, user]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,13 +137,15 @@ export const ChatPage = () => {
       <main className="flex-1 flex flex-col">
         {selectedChat ? (
           <>
-            {/* 👇 НОВОЕ: Шапка чата с динамическим статусом */}
+            {/* 👇 НОВОЕ: шапка чата с именем собеседника */}
             <header className="p-4 bg-white border-b border-gray-200 flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
-                {selectedChat.name?.[0] || 'Ч'}
+                {otherUser?.username?.[0] || 'Ч'}
               </div>
               <div>
-                <h3 className="font-semibold">{selectedChat.name || 'Чат'}</h3>
+                <h3 className="font-semibold">
+                  {otherUser?.username || 'Чат'}
+                </h3>
                 <span className="text-xs">
                   {onlineUsers.length > 0 ? (
                     <span className="text-green-500">онлайн</span>
@@ -129,18 +176,16 @@ export const ChatPage = () => {
                   </span>
                 </div>
               ))}
-              {/* Пустой div для прокрутки вниз */}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* 👇 НОВОЕ: поле ввода с отправкой события "печатает" */}
             <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-200 flex gap-2">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);
-                  sendTyping(); // 👈 НОВОЕ: отправляем событие "печатает"
+                  sendTyping();
                 }}
                 placeholder="Напишите сообщение..."
                 className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
