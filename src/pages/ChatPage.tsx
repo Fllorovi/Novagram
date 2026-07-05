@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useChats } from '../hooks/useChats';
 import { useRealtimeMessages } from '../hooks/useRealtime';
+import { usePresence } from '../hooks/usePresence'; // 👈 НОВОЕ: импортируем хук для Presence
 import { chatsApi } from '../api/chatsApi';
 import type { Chat, Message } from '../types/chat.types';
 
@@ -11,6 +12,12 @@ export const ChatPage = () => {
   const { chats, loading: chatsLoading } = useChats(user?.id || null);
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
+
+  // 👇 НОВОЕ: подключаем хук Presence для выбранного чата
+  const { onlineUsers, isTyping, sendTyping } = usePresence(
+    selectedChat?.id || null,
+    user?.id || null
+  );
 
   // Реф для контейнера сообщений
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -85,12 +92,23 @@ export const ChatPage = () => {
       <main className="flex-1 flex flex-col">
         {selectedChat ? (
           <>
+            {/* 👇 НОВОЕ: Шапка чата с динамическим статусом */}
             <header className="p-4 bg-white border-b border-gray-200 flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-300 flex items-center justify-center text-white mr-4">
                 {selectedChat.name?.[0] || 'Ч'}
               </div>
               <div>
                 <h3 className="font-semibold">{selectedChat.name || 'Чат'}</h3>
+                <span className="text-xs">
+                  {onlineUsers.length > 0 ? (
+                    <span className="text-green-500">онлайн</span>
+                  ) : (
+                    <span className="text-gray-400">офлайн</span>
+                  )}
+                  {isTyping && (
+                    <span className="text-blue-500 ml-2">печатает...</span>
+                  )}
+                </span>
               </div>
             </header>
 
@@ -115,11 +133,15 @@ export const ChatPage = () => {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* 👇 НОВОЕ: поле ввода с отправкой события "печатает" */}
             <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-200 flex gap-2">
               <input
                 type="text"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  sendTyping(); // 👈 НОВОЕ: отправляем событие "печатает"
+                }}
                 placeholder="Напишите сообщение..."
                 className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
