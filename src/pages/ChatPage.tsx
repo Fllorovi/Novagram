@@ -1,12 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Fragment } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useChats } from '../hooks/useChats';
 import { useRealtimeMessages } from '../hooks/useRealtime';
 import { usePresence } from '../hooks/usePresence';
+import { useReactions } from '../hooks/useReactions';
 import { chatsApi } from '../api/chatsApi';
 import { supabase } from '../api/supabaseClient';
 import type { Chat, Message } from '../types/chat.types';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
+import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { formatMessageDate } from '../utils/dateUtils';
 
 export const ChatPage = () => {
@@ -27,6 +29,25 @@ export const ChatPage = () => {
   );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const messageIds = messages.map((m) => m.id);
+  const { toggleReaction, getReactionsForMessage } = useReactions(
+    messageIds,
+    user?.id || null
+  );
+
+  // Состояние для модалки с реакциями
+  const [reactionPicker, setReactionPicker] = useState<{
+    isOpen: boolean;
+    messageId: number | null;
+    x: number;
+    y: number;
+  }>({
+    isOpen: false,
+    messageId: null,
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -191,42 +212,70 @@ export const ChatPage = () => {
             </header>
 
             <div className="flex-1 p-4 overflow-y-auto bg-[var(--bg-primary)] space-y-3">
-  {messagesLoading && <p className="text-center text-[var(--text-muted)]">Загрузка сообщений...</p>}
+              {messagesLoading && (
+                <p className="text-center text-[var(--text-muted)]">Загрузка сообщений...</p>
+              )}
 
-  {messages.map((msg, index) => {
-    // Проверяем, нужно ли показывать разделитель
-    const showDate = index === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[index - 1].created_at).toDateString();
+              {messages.map((msg, index) => {
+                const showDate =
+                  index === 0 ||
+                  new Date(msg.created_at).toDateString() !==
+                    new Date(messages[index - 1].created_at).toDateString();
 
-    return (
-      <React.Fragment key={msg.id}>
-        {showDate && (
-          <div className="flex justify-center my-4">
-            <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-secondary)] px-3 py-1 rounded-full border border-[var(--border)]">
-              {formatMessageDate(new Date(msg.created_at))}
-            </span>
-          </div>
-        )}
-        <div
-          className={`max-w-xs px-4 py-2 rounded-lg ${
-            msg.sender_id === user?.id
-              ? 'bg-[var(--accent)] text-white self-end ml-auto'
-              : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)]'
-          }`}
-        >
-          <p>{msg.content}</p>
-          <span className="text-xs opacity-70 block mt-1">
-            {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-        </div>
-      </React.Fragment>
-    );
-  })}
+                const reactions = getReactionsForMessage(msg.id);
 
-  <div ref={messagesEndRef} />
-</div>
+                return (
+                  <Fragment key={msg.id}>
+                    {showDate && (
+                      <div className="flex justify-center my-4">
+                        <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-secondary)] px-3 py-1 rounded-full border border-[var(--border)]">
+                          {formatMessageDate(new Date(msg.created_at))}
+                        </span>
+                      </div>
+                    )}
+
+                    <div
+                      className={`max-w-xs px-4 py-2 rounded-lg ${
+                        msg.sender_id === user?.id
+                          ? 'bg-[var(--accent)] text-white self-end ml-auto'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)]'
+                      }`}
+                      onDoubleClick={() => toggleReaction(msg.id, '❤️')}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setReactionPicker({
+                          isOpen: true,
+                          messageId: msg.id,
+                          x: rect.left + rect.width / 2 - 80,
+                          y: rect.top - 10,
+                        });
+                      }}
+                    >
+                      <p>{msg.content}</p>
+                      <span className="text-xs opacity-70 block mt-1">
+                        {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+
+                      {/* Реакции под сообщением */}
+                      {reactions.length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 mt-1">
+                          {reactions.map((r) => (
+                            <span key={r.id} className="text-sm">
+                              {r.emoji}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Fragment>
+                );
+              })}
+
+              <div ref={messagesEndRef} />
+            </div>
 
             <form
               onSubmit={handleSendMessage}
@@ -256,6 +305,20 @@ export const ChatPage = () => {
           </div>
         )}
       </main>
+
+      {/* Модалка выбора реакций */}
+      <ReactionPicker
+        isOpen={reactionPicker.isOpen}
+        onClose={() =>
+          setReactionPicker({ isOpen: false, messageId: null, x: 0, y: 0 })
+        }
+        onSelect={(emoji) => {
+          if (reactionPicker.messageId) {
+            toggleReaction(reactionPicker.messageId, emoji);
+          }
+        }}
+        position={{ x: reactionPicker.x, y: reactionPicker.y }}
+      />
     </div>
   );
 };

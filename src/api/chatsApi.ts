@@ -74,4 +74,46 @@ deleteChat: async (chatId: number) => {
     .eq('id', chatId);
   if (err3) throw err3;
 },
+// Добавить или удалить реакцию (toggle)
+toggleReaction: async (messageId: number, userId: string, emoji: string) => {
+  // Проверяем, есть ли уже такая реакция
+  const { data: existing, error: findError } = await supabase
+    .from('reactions')
+    .select('id')
+    .eq('message_id', messageId)
+    .eq('user_id', userId)
+    .eq('emoji', emoji)
+    .single();
+
+  if (findError && findError.code !== 'PGRST116') throw findError;
+
+  if (existing) {
+    // Если есть — удаляем
+    const { error: deleteError } = await supabase
+      .from('reactions')
+      .delete()
+      .eq('id', existing.id);
+    if (deleteError) throw deleteError;
+    return null;
+  } else {
+    // Если нет — добавляем
+    const { data, error } = await supabase
+      .from('reactions')
+      .insert([{ message_id: messageId, user_id: userId, emoji }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+},
+
+// Получить реакции для сообщений
+getReactions: async (messageIds: number[]) => {
+  const { data, error } = await supabase
+    .from('reactions')
+    .select('*')
+    .in('message_id', messageIds);
+  if (error) throw error;
+  return data || [];
+},
 };
