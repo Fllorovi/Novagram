@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://i.imgur.com/4n2p0l.png" alt="Novagram Logo" width="120">
-</p>
+
 
 <h1 align="center">✨ Novagram</h1>
 
@@ -55,27 +53,11 @@
 
 ---
 
-## 🏗️ Архитектура проекта
-novagram/
-├── src/
-│ ├── api/ # Supabase клиент и запросы к БД
-│ ├── components/ # UI-компоненты (Button, Input, Avatar)
-│ ├── hooks/ # Кастомные хуки (useChats, usePresence, useRealtime)
-│ ├── pages/ # Страницы (ChatPage, LoginPage, RegisterPage)
-│ ├── store/ # Zustand-сторы (authStore)
-│ ├── types/ # TypeScript-интерфейсы
-│ └── utils/ # Утилиты (форматирование даты и др.)
-├── public/ # Статические файлы
-├── .env.local # Переменные окружения (не в репозитории!)
-├── vercel.json # Настройки деплоя для Vercel
-└── package.json # Зависимости и скрипты
----
-
 ## 🚀 Быстрый старт
 
 ### 1. Клонируй репозиторий
 
-```bash
+bash
 git clone https://github.com/your-username/novagram.git
 cd novagram
 2. Установи зависимости
@@ -91,6 +73,10 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 bash
 npm run dev
 Открой http://localhost:5173 в браузере.
-📄 Лицензия
+
+
+📄
 Проект распространяется под лицензией MIT. Вы можете свободно использовать, изменять и распространять этот код.
+
+
 <p align="center"> Сделано с ❤️ для тех, кто ценит свободу общения. </p>
