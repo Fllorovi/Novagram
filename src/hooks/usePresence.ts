@@ -10,52 +10,78 @@ export const usePresence = (chatId: number | null, userId: string | null) => {
 
     const channel = supabase.channel(`presence:${chatId}`);
 
-    // Подписка на события Presence
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const now = Date.now();
-        
-        // Фильтруем пользователей, которые обновляли статус менее 10 секунд назад
-        const users = Object.keys(state).filter((id) => {
-          if (id === userId) return false; // исключаем себя
-          const presenceList = state[id] as any[];
-          if (!presenceList || presenceList.length === 0) return false;
-          
-          // Проверяем время последнего обновления
-          const lastSeen = presenceList[0]?.last_seen || 0;
-          return now - lastSeen < 10000; // 10 секунд
-        });
-        
-        setOnlineUsers(users);
-      })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        setOnlineUsers((prev) => {
-          if (prev.includes(key)) return prev;
-          return [...prev, key];
-        });
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        setOnlineUsers((prev) => prev.filter((id) => id !== key));
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            user_id: userId,
-            last_seen: Date.now(), // 👈 добавляем время последнего обновления
-          });
-        }
-      });
-
-    // 👇 Периодически обновляем статус (каждые 5 секунд)
-    const interval = setInterval(async () => {
+    // Функция для обновления статуса
+    const updatePresence = async () => {
+      if (document.hidden) return; // 👈 не обновляем, если вкладка неактивна
       await channel.track({
         user_id: userId,
         last_seen: Date.now(),
       });
-    }, 5000);
+    };
 
-    // Подписка на события "печатает"
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const now = Date.now();
+        const users: string[] = [];
+
+        Object.keys(state).forEach((key) => {
+          const presenceList = state[key] as any[];
+          if (!presenceList || presenceList.length === 0) return;
+
+          const userData = presenceList[0];
+          const userIdFromPresence = userData?.user_id;
+
+          if (userIdFromPresence === userId) return;
+
+          const lastSeen = userData?.last_seen || 0;
+          if (now - lastSeen < 10000) {
+            users.push(userIdFromPresence);
+          }
+        });
+
+        setOnlineUsers(users);
+      })
+      .on('presence', { event: 'join' }, ({ key }) => {
+        setOnlineUsers((prev) => {
+          const state = channel.presenceState();
+          const presenceList = state[key] as any[];
+          if (!presenceList || presenceList.length === 0) return prev;
+          const userData = presenceList[0];
+          const userIdFromPresence = userData?.user_id;
+
+          if (userIdFromPresence === userId) return prev;
+          if (prev.includes(userIdFromPresence)) return prev;
+          return [...prev, userIdFromPresence];
+        });
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        setOnlineUsers((prev) => {
+          const state = channel.presenceState();
+          const presenceList = state[key] as any[];
+          if (!presenceList || presenceList.length === 0) return prev;
+          const userData = presenceList[0];
+          const userIdFromPresence = userData?.user_id;
+          return prev.filter((id) => id !== userIdFromPresence);
+        });
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await updatePresence();
+        }
+      });
+
+    // 👇 Обновляем статус каждые 3 секунды, только если вкладка активна
+    const interval = setInterval(updatePresence, 3000);
+
+    // 👇 Обновляем статус при возвращении на вкладку
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        updatePresence();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const typingChannel = supabase.channel(`typing:${chatId}`);
     typingChannel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
@@ -68,6 +94,7 @@ export const usePresence = (chatId: number | null, userId: string | null) => {
 
     return () => {
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       supabase.removeChannel(channel);
       supabase.removeChannel(typingChannel);
     };
