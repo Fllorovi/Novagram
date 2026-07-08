@@ -14,20 +14,46 @@ export const usePresence = (chatId: number | null, userId: string | null) => {
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        const users = Object.keys(state).filter((id) => id !== userId);
+        const now = Date.now();
+        
+        // Фильтруем пользователей, которые обновляли статус менее 10 секунд назад
+        const users = Object.keys(state).filter((id) => {
+          if (id === userId) return false; // исключаем себя
+          const presenceList = state[id] as any[];
+          if (!presenceList || presenceList.length === 0) return false;
+          
+          // Проверяем время последнего обновления
+          const lastSeen = presenceList[0]?.last_seen || 0;
+          return now - lastSeen < 10000; // 10 секунд
+        });
+        
         setOnlineUsers(users);
       })
       .on('presence', { event: 'join' }, ({ key }) => {
-        setOnlineUsers((prev) => [...prev, key]);
+        setOnlineUsers((prev) => {
+          if (prev.includes(key)) return prev;
+          return [...prev, key];
+        });
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
         setOnlineUsers((prev) => prev.filter((id) => id !== key));
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await channel.track({ user_id: userId });
+          await channel.track({
+            user_id: userId,
+            last_seen: Date.now(), // 👈 добавляем время последнего обновления
+          });
         }
       });
+
+    // 👇 Периодически обновляем статус (каждые 5 секунд)
+    const interval = setInterval(async () => {
+      await channel.track({
+        user_id: userId,
+        last_seen: Date.now(),
+      });
+    }, 5000);
 
     // Подписка на события "печатает"
     const typingChannel = supabase.channel(`typing:${chatId}`);
@@ -35,12 +61,13 @@ export const usePresence = (chatId: number | null, userId: string | null) => {
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.user_id !== userId) {
           setIsTyping(true);
-          setTimeout(() => setIsTyping(false), 3000); // Сбрасываем через 3 секунды
+          setTimeout(() => setIsTyping(false), 3000);
         }
       })
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
       supabase.removeChannel(typingChannel);
     };
