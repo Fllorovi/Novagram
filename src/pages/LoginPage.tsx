@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components/ui';
 import { useAuthStore } from '../store/authStore';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -9,7 +10,7 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, setDemoUser } = useAuthStore(); // 👈 добавляем setDemoUser
+  const { signIn } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +18,7 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      await signIn(email.trim(), password.trim());
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Ошибка входа');
@@ -26,23 +27,27 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // 👇 НОВАЯ ФУНКЦИЯ для демо-входа
-  const handleDemoLogin = () => {
-    setDemoUser();
-    navigate('/');
-  };
-
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-md w-96">
-        <h1 className="text-2xl font-bold text-center mb-6">Вход</h1>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] px-4 relative">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
+
+      <div className="bg-[var(--bg-card)] p-8 rounded-2xl shadow-2xl w-full max-w-md border border-[var(--border)] transition-colors duration-300">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-[var(--text-primary)] tracking-tight">
+            Novagram
+          </h1>
+          <p className="text-[var(--text-secondary)] mt-2">Войди в свою вселенную</p>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <Input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mb-4"
+            className="mb-4 bg-[var(--bg-input)] text-[var(--text-primary)] border-[var(--border)] focus:ring-2 focus:ring-[var(--accent)] transition-all"
             required
           />
           <Input
@@ -50,34 +55,23 @@ export const LoginPage: React.FC = () => {
             placeholder="Пароль"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-4"
+            className="mb-4 bg-[var(--bg-input)] text-[var(--text-primary)] border-[var(--border)] focus:ring-2 focus:ring-[var(--accent)] transition-all"
             required
           />
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          <Button type="submit" fullWidth loading={loading}>
+          <Button
+            type="submit"
+            fullWidth
+            loading={loading}
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold py-2.5 rounded-lg transition-all duration-200"
+          >
             Войти
           </Button>
         </form>
 
-        {/* 👇 РАЗДЕЛИТЕЛЬ И КНОПКА ДЕМО-ВХОДА */}
-        <div className="mt-4 flex items-center gap-2">
-          <hr className="flex-1 border-gray-300" />
-          <span className="text-sm text-gray-400">или</span>
-          <hr className="flex-1 border-gray-300" />
-        </div>
-
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={handleDemoLogin}
-          className="mt-2"
-        >
-          🚀 Войти как демо-пользователь
-        </Button>
-
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-[var(--text-secondary)]">
           Нет аккаунта?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
+          <Link to="/register" className="text-[var(--accent)] hover:underline font-medium">
             Зарегистрироваться
           </Link>
         </p>
