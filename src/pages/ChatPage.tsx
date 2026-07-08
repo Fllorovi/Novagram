@@ -14,8 +14,11 @@ export const ChatPage = () => {
   const { chats, loading: chatsLoading, setChats } = useChats(user?.id || null);
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
-  
-  const [otherUser, setOtherUser] = useState<{ username: string | null; avatar_url: string | null } | null>(null);
+
+  const [otherUser, setOtherUser] = useState<{
+    username: string | null;
+    avatar_url: string | null;
+  } | null>(null);
 
   const { onlineUsers, isTyping, sendTyping } = usePresence(
     selectedChat?.id || null,
@@ -104,26 +107,26 @@ export const ChatPage = () => {
 
   if (chatsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-bg-primary">
-        <p className="text-text-primary">Загрузка чатов...</p>
+      <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
+        <p className="text-[var(--text-primary)]">Загрузка чатов...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-bg-primary">
+    <div className="flex h-screen bg-[var(--bg-primary)]">
       {/* Сайдбар */}
-      <aside className="w-80 bg-bg-secondary border-r border-border flex flex-col">
-        <div className="p-4 border-b border-border flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-text-primary">Чаты</h2>
+      <aside className="w-80 bg-[var(--bg-secondary)] border-r border-[var(--border)] flex flex-col">
+        <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Чаты</h2>
           <ThemeToggle />
         </div>
         <ul className="flex-1 overflow-y-auto">
           {chats.map((chat) => (
             <li
               key={chat.id}
-              className={`flex items-center p-4 cursor-pointer hover:bg-bg-input border-b border-border ${
-                selectedChat?.id === chat.id ? 'bg-bg-input' : ''
+              className={`flex items-center p-4 cursor-pointer hover:bg-[var(--bg-input)] border-b border-[var(--border)] ${
+                selectedChat?.id === chat.id ? 'bg-[var(--bg-input)]' : ''
               }`}
               onClick={() => setSelectedChat(chat)}
               onContextMenu={(e) => {
@@ -131,18 +134,20 @@ export const ChatPage = () => {
                 handleDeleteChat(chat.id, chat.displayName || 'Чат');
               }}
             >
-              <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-white mr-4 font-semibold">
+              <div className="w-12 h-12 rounded-full bg-[var(--accent)] flex items-center justify-center text-white mr-4 font-semibold">
                 {chat.displayName?.[0] || 'Ч'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between">
-                  <span className="font-medium text-text-primary">{chat.displayName || 'Чат'}</span>
+                  <span className="font-medium text-[var(--text-primary)]">
+                    {chat.displayName || 'Чат'}
+                  </span>
                 </div>
               </div>
             </li>
           ))}
         </ul>
-        <div className="p-4 border-t border-border text-sm text-text-secondary flex items-center justify-between">
+        <div className="p-4 border-t border-[var(--border)] text-sm text-[var(--text-secondary)] flex items-center justify-between">
           <span>{user?.username || user?.email || 'Пользователь'}</span>
           <button
             onClick={handleLogout}
@@ -154,57 +159,65 @@ export const ChatPage = () => {
       </aside>
 
       {/* Окно чата */}
-      <main className="flex-1 flex flex-col bg-bg-primary">
+      <main className="flex-1 flex flex-col bg-[var(--bg-primary)]">
         {selectedChat ? (
           <>
             <header
-              className="p-4 bg-bg-secondary border-b border-border flex items-center"
+              className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center"
               onContextMenu={(e) => {
                 e.preventDefault();
                 handleDeleteChat(selectedChat.id, otherUser?.username || 'Чат');
               }}
             >
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white mr-4 font-semibold">
+              <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white mr-4 font-semibold">
                 {otherUser?.username?.[0] || 'Ч'}
               </div>
               <div>
-                <h3 className="font-semibold text-text-primary">
+                <h3 className="font-semibold text-[var(--text-primary)]">
                   {otherUser?.username || 'Чат'}
                 </h3>
                 <span className="text-xs">
                   {onlineUsers.length > 0 ? (
-                    <span className="text-accent">онлайн</span>
+                    <span className="text-[var(--accent)]">онлайн</span>
                   ) : (
-                    <span className="text-text-muted">офлайн</span>
+                    <span className="text-[var(--text-muted)]">офлайн</span>
                   )}
                   {isTyping && (
-                    <span className="text-accent ml-2">печатает...</span>
+                    <span className="text-[var(--accent)] ml-2">печатает...</span>
                   )}
                 </span>
               </div>
             </header>
 
-            <div className="flex-1 p-4 overflow-y-auto bg-bg-primary space-y-3">
-              {messagesLoading && <p className="text-center text-text-muted">Загрузка сообщений...</p>}
+            <div className="flex-1 p-4 overflow-y-auto bg-[var(--bg-primary)] space-y-3">
+              {messagesLoading && (
+                <p className="text-center text-[var(--text-muted)]">Загрузка сообщений...</p>
+              )}
               {messages.map((msg: Message) => (
                 <div
                   key={msg.id}
                   className={`max-w-xs px-4 py-2 rounded-lg ${
                     msg.sender_id === user?.id
-                      ? 'bg-accent text-white self-end ml-auto'
-                      : 'bg-bg-secondary text-text-primary'
+                      ? 'bg-[var(--accent)] text-white self-end ml-auto'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)]'
                   }`}
                 >
                   <p>{msg.content}</p>
                   <span className="text-xs opacity-70 block mt-1">
-                    {new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-4 bg-bg-secondary border-t border-border flex gap-2">
+            <form
+              onSubmit={handleSendMessage}
+              className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex gap-2"
+            >
               <input
                 type="text"
                 value={newMessage}
@@ -213,18 +226,18 @@ export const ChatPage = () => {
                   sendTyping();
                 }}
                 placeholder="Напишите сообщение..."
-                className="flex-1 bg-bg-input text-text-primary border border-border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                className="flex-1 bg-[var(--bg-input)] text-[var(--text-primary)] border border-[var(--border)] rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all"
               />
               <button
                 type="submit"
-                className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-full transition"
+                className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-2 rounded-full transition"
               >
                 ➤
               </button>
             </form>
           </>
         ) : (
-          <div className="flex items-center justify-center h-full text-text-muted">
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
             Выберите чат для начала общения
           </div>
         )}
