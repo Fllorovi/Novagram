@@ -7,6 +7,7 @@ import { chatsApi } from '../api/chatsApi';
 import { supabase } from '../api/supabaseClient';
 import type { Chat, Message } from '../types/chat.types';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
+import { formatMessageDate } from '../utils/dateUtils';
 
 export const ChatPage = () => {
   const { user, signOut } = useAuthStore();
@@ -190,29 +191,42 @@ export const ChatPage = () => {
             </header>
 
             <div className="flex-1 p-4 overflow-y-auto bg-[var(--bg-primary)] space-y-3">
-              {messagesLoading && (
-                <p className="text-center text-[var(--text-muted)]">Загрузка сообщений...</p>
-              )}
-              {messages.map((msg: Message) => (
-                <div
-                  key={msg.id}
-                  className={`max-w-xs px-4 py-2 rounded-lg ${
-                    msg.sender_id === user?.id
-                      ? 'bg-[var(--accent)] text-white self-end ml-auto'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)]'
-                  }`}
-                >
-                  <p>{msg.content}</p>
-                  <span className="text-xs opacity-70 block mt-1">
-                    {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+  {messagesLoading && <p className="text-center text-[var(--text-muted)]">Загрузка сообщений...</p>}
+
+  {messages.map((msg, index) => {
+    // Проверяем, нужно ли показывать разделитель
+    const showDate = index === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[index - 1].created_at).toDateString();
+
+    return (
+      <React.Fragment key={msg.id}>
+        {showDate && (
+          <div className="flex justify-center my-4">
+            <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-secondary)] px-3 py-1 rounded-full border border-[var(--border)]">
+              {formatMessageDate(new Date(msg.created_at))}
+            </span>
+          </div>
+        )}
+        <div
+          className={`max-w-xs px-4 py-2 rounded-lg ${
+            msg.sender_id === user?.id
+              ? 'bg-[var(--accent)] text-white self-end ml-auto'
+              : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)]'
+          }`}
+        >
+          <p>{msg.content}</p>
+          <span className="text-xs opacity-70 block mt-1">
+            {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        </div>
+      </React.Fragment>
+    );
+  })}
+
+  <div ref={messagesEndRef} />
+</div>
 
             <form
               onSubmit={handleSendMessage}
