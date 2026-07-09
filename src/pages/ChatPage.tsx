@@ -15,9 +15,10 @@ import { UserSearch } from '../components/ui/UserSearch';
 export const ChatPage = () => {
   const { user, signOut } = useAuthStore();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const { chats, loading: chatsLoading, setChats } = useChats(user?.id || null);
+  const { chats, loading: chatsLoading, setChats, refreshChats } = useChats(user?.id || null);
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
+  
 
   const [otherUser, setOtherUser] = useState<{
     username: string | null;
@@ -37,7 +38,6 @@ export const ChatPage = () => {
     user?.id || null
   );
 
-  // Состояние для модалки с реакциями
   const [reactionPicker, setReactionPicker] = useState<{
     isOpen: boolean;
     messageId: number | null;
@@ -58,6 +58,17 @@ export const ChatPage = () => {
 
   useEffect(() => {
     if (!selectedChat || !user) return;
+
+    const markAndRefresh = async () => {
+      try {
+        await chatsApi.markMessagesAsRead(selectedChat.id, user.id);
+        await refreshChats();
+      } catch (error) {
+        console.error('Ошибка при отметке прочитанных:', error);
+      }
+    };
+
+    markAndRefresh();
 
     const loadOtherUser = async () => {
       const { data: participants, error: err1 } = await supabase
@@ -138,23 +149,20 @@ export const ChatPage = () => {
 
   return (
     <div className="flex h-screen bg-[var(--bg-primary)]">
-      {/* Сайдбар */}
       <aside className="w-80 bg-[var(--bg-secondary)] border-r border-[var(--border)] flex flex-col">
-<div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
-  <h2 className="text-xl font-semibold text-[var(--text-primary)]">Чаты</h2>
-  <ThemeToggle />
-</div>
+        <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Чаты</h2>
+          <ThemeToggle />
+        </div>
 
-{/* 👇 Поиск пользователей */}
-<UserSearch
-  currentUserId={user?.id || ''}
-  onChatCreated={(chatId) => {
-    // Перезагружаем список чатов и открываем новый
-    setSelectedChat(null);
-    // Можно вызвать refreshChats, если добавить в useChats
-    window.location.reload(); // временно
-  }}
-/>
+        <UserSearch
+          currentUserId={user?.id || ''}
+          onChatCreated={(chatId) => {
+            setSelectedChat(null);
+            window.location.reload();
+          }}
+        />
+
         <ul className="flex-1 overflow-y-auto">
           {chats.map((chat) => (
             <li
@@ -172,15 +180,21 @@ export const ChatPage = () => {
                 {chat.displayName?.[0] || 'Ч'}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="font-medium text-[var(--text-primary)]">
                     {chat.displayName || 'Чат'}
                   </span>
+                  {chat.unreadCount !== undefined && chat.unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {chat.unreadCount}
+                    </span>
+                  )}
                 </div>
               </div>
             </li>
           ))}
         </ul>
+
         <div className="p-4 border-t border-[var(--border)] text-sm text-[var(--text-secondary)] flex items-center justify-between">
           <span>{user?.username || user?.email || 'Пользователь'}</span>
           <button
@@ -192,7 +206,6 @@ export const ChatPage = () => {
         </div>
       </aside>
 
-      {/* Окно чата */}
       <main className="flex-1 flex flex-col bg-[var(--bg-primary)]">
         {selectedChat ? (
           <>
@@ -235,7 +248,7 @@ export const ChatPage = () => {
                     new Date(messages[index - 1].created_at).toDateString();
 
                 const reactions = getReactionsForMessage(msg.id);
-
+                
                 return (
                   <Fragment key={msg.id}>
                     {showDate && (
@@ -271,7 +284,6 @@ export const ChatPage = () => {
                         })}
                       </span>
 
-                      {/* Реакции под сообщением */}
                       {reactions.length > 0 && (
                         <div className="flex flex-wrap gap-0.5 mt-1">
                           {reactions.map((r) => (
@@ -318,7 +330,6 @@ export const ChatPage = () => {
         )}
       </main>
 
-      {/* Модалка выбора реакций */}
       <ReactionPicker
         isOpen={reactionPicker.isOpen}
         onClose={() =>
@@ -333,4 +344,5 @@ export const ChatPage = () => {
       />
     </div>
   );
+  
 };

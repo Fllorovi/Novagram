@@ -28,7 +28,82 @@ export const chatsApi = {
     console.log('📦 6. chats:', chats);
     if (err2) console.error('❌ 7. Ошибка chats:', err2);
 
-    return chats || [];
+    if (!chats) return [];
+
+    const chatsWithUnread = await Promise.all(
+      chats.map(async (chat) => {
+        const { count, error } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('chat_id', chat.id)
+          .neq('sender_id', userId)
+          .eq('is_read', false);
+
+        if (error) {
+          console.error('❌ Ошибка подсчёта непрочитанных:', error);
+          return { ...chat, unreadCount: 0 };
+        }
+
+        return { ...chat, unreadCount: count || 0 };
+      })
+    );
+
+    console.log('🔥 Промежуточный результат с unreadCount:', chatsWithUnread);
+
+    const chatsWithNames = await Promise.all(
+      chatsWithUnread.map(async (chat) => {
+        const { data: chatParticipants } = await supabase
+          .from('chat_participants')
+          .select('user_id')
+          .eq('chat_id', chat.id);
+
+        if (!chatParticipants || chatParticipants.length === 0) {
+          return { ...chat, displayName: 'Чат' };
+        }
+
+        if (chatParticipants.length > 2) {
+          const otherUserIds = chatParticipants
+            .map((p) => p.user_id)
+            .filter((id) => id !== userId);
+
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('username')
+            .in('id', otherUserIds);
+
+          if (profiles && profiles.length > 0) {
+            const names = profiles.map((p) => p.username).filter(Boolean);
+            return {
+              ...chat,
+              displayName: names.length > 0 ? names.join(', ') : 'Групповой чат',
+            };
+          }
+          return { ...chat, displayName: 'Групповой чат' };
+        }
+
+        const otherUserId = chatParticipants
+          .map((p) => p.user_id)
+          .find((id) => id !== userId);
+
+        if (!otherUserId) {
+          return { ...chat, displayName: 'Чат' };
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', otherUserId)
+          .single();
+
+        return {
+          ...chat,
+          displayName: profile?.username || 'Без имени',
+        };
+      })
+    );
+
+    console.log('🔥 Финальный результат с unreadCount:', chatsWithNames);
+    return chatsWithNames;
   },
 
   getMessages: async (chatId: number) => {
@@ -50,140 +125,138 @@ export const chatsApi = {
     if (error) throw error;
     return data;
   },
-  // Удалить чат и все связанные данные
-deleteChat: async (chatId: number) => {
-  // Удаляем сообщения (каскадное удаление сработает, если есть внешние ключи)
-  // Но на всякий случай удалим вручную
-  const { error: err1 } = await supabase
-    .from('messages')
-    .delete()
-    .eq('chat_id', chatId);
-  if (err1) throw err1;
 
-  // Удаляем участников
-  const { error: err2 } = await supabase
-    .from('chat_participants')
-    .delete()
-    .eq('chat_id', chatId);
-  if (err2) throw err2;
-
-  // Удаляем сам чат
-  const { error: err3 } = await supabase
-    .from('chats')
-    .delete()
-    .eq('id', chatId);
-  if (err3) throw err3;
-},
-// Добавить или удалить реакцию (toggle)
-toggleReaction: async (messageId: number, userId: string, emoji: string) => {
-  // Проверяем, есть ли уже такая реакция
-  const { data: existing, error: findError } = await supabase
-    .from('reactions')
-    .select('id')
-    .eq('message_id', messageId)
-    .eq('user_id', userId)
-    .eq('emoji', emoji)
-    .single();
-
-  if (findError && findError.code !== 'PGRST116') throw findError;
-
-  if (existing) {
-    // Если есть — удаляем
-    const { error: deleteError } = await supabase
-      .from('reactions')
+  deleteChat: async (chatId: number) => {
+    const { error: err1 } = await supabase
+      .from('messages')
       .delete()
-      .eq('id', existing.id);
-    if (deleteError) throw deleteError;
-    return null;
-  } else {
-    // Если нет — добавляем
+      .eq('chat_id', chatId);
+    if (err1) throw err1;
+
+    const { error: err2 } = await supabase
+      .from('chat_participants')
+      .delete()
+      .eq('chat_id', chatId);
+    if (err2) throw err2;
+
+    const { error: err3 } = await supabase
+      .from('chats')
+      .delete()
+      .eq('id', chatId);
+    if (err3) throw err3;
+  },
+
+  toggleReaction: async (messageId: number, userId: string, emoji: string) => {
+    const { data: existing, error: findError } = await supabase
+      .from('reactions')
+      .select('id')
+      .eq('message_id', messageId)
+      .eq('user_id', userId)
+      .eq('emoji', emoji)
+      .single();
+
+    if (findError && findError.code !== 'PGRST116') throw findError;
+
+    if (existing) {
+      const { error: deleteError } = await supabase
+        .from('reactions')
+        .delete()
+        .eq('id', existing.id);
+      if (deleteError) throw deleteError;
+      return null;
+    } else {
+      const { data, error } = await supabase
+        .from('reactions')
+        .insert([{ message_id: messageId, user_id: userId, emoji }])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  },
+
+  getReactions: async (messageIds: number[]) => {
     const { data, error } = await supabase
       .from('reactions')
-      .insert([{ message_id: messageId, user_id: userId, emoji }])
-      .select()
-      .single();
+      .select('*')
+      .in('message_id', messageIds);
     if (error) throw error;
-    return data;
-  }
-},
+    return data || [];
+  },
 
-// Получить реакции для сообщений
-getReactions: async (messageIds: number[]) => {
-  const { data, error } = await supabase
-    .from('reactions')
-    .select('*')
-    .in('message_id', messageIds);
-  if (error) throw error;
-  return data || [];
-},
-// Поиск пользователей по имени или email
-searchUsers: async (query: string, currentUserId: string) => {
-  if (!query.trim() || query.length < 2) return [];
+  searchUsers: async (query: string, currentUserId: string) => {
+    if (!query.trim() || query.length < 2) return [];
 
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url')
-      .ilike('username', `%${query.trim()}%`)
-      .neq('id', currentUserId)
-      .limit(10);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .ilike('username', `%${query.trim()}%`)
+        .neq('id', currentUserId)
+        .limit(10);
 
-    if (error) {
+      if (error) {
+        console.error('Ошибка поиска:', error);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
       console.error('Ошибка поиска:', error);
       return [];
     }
-    return data || [];
-  } catch (error) {
-    console.error('Ошибка поиска:', error);
-    return [];
-  }
-},
-// Создать чат с пользователем
-createChat: async (userId: string, otherUserId: string) => {
-  // Проверяем, есть ли уже чат между этими пользователями
-  const { data: existing, error: findError } = await supabase
-    .from('chat_participants')
-    .select('chat_id')
-    .eq('user_id', userId);
+  },
 
-  if (findError) throw findError;
-
-  // Проверяем, есть ли общий чат
-  const chatIds = existing?.map((p) => p.chat_id) || [];
-  if (chatIds.length > 0) {
-    const { data: common, error: commonError } = await supabase
+  createChat: async (userId: string, otherUserId: string) => {
+    const { data: existing, error: findError } = await supabase
       .from('chat_participants')
       .select('chat_id')
-      .eq('user_id', otherUserId)
-      .in('chat_id', chatIds);
+      .eq('user_id', userId);
 
-    if (commonError) throw commonError;
+    if (findError) throw findError;
 
-    if (common && common.length > 0) {
-      // Чат уже существует — возвращаем его id
-      return common[0].chat_id;
+    const chatIds = existing?.map((p) => p.chat_id) || [];
+    if (chatIds.length > 0) {
+      const { data: common, error: commonError } = await supabase
+        .from('chat_participants')
+        .select('chat_id')
+        .eq('user_id', otherUserId)
+        .in('chat_id', chatIds);
+
+      if (commonError) throw commonError;
+
+      if (common && common.length > 0) {
+        return common[0].chat_id;
+      }
     }
-  }
 
-  // Создаём новый чат
-  const { data: newChat, error: createError } = await supabase
-    .from('chats')
-    .insert([{ name: null, is_private: true }])
-    .select()
-    .single();
+    const { data: newChat, error: createError } = await supabase
+      .from('chats')
+      .insert([{ name: null, is_private: true }])
+      .select()
+      .single();
 
-  if (createError) throw createError;
+    if (createError) throw createError;
 
-  // Добавляем участников
-  const { error: participantsError } = await supabase
-    .from('chat_participants')
-    .insert([
-      { chat_id: newChat.id, user_id: userId },
-      { chat_id: newChat.id, user_id: otherUserId },
-    ]);
+    const { error: participantsError } = await supabase
+      .from('chat_participants')
+      .insert([
+        { chat_id: newChat.id, user_id: userId },
+        { chat_id: newChat.id, user_id: otherUserId },
+      ]);
 
-  if (participantsError) throw participantsError;
+    if (participantsError) throw participantsError;
 
-  return newChat.id;
-},
+    return newChat.id;
+  },
+
+  markMessagesAsRead: async (chatId: number, userId: string) => {
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('chat_id', chatId)
+      .neq('sender_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+  },
 };

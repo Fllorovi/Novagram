@@ -4,6 +4,7 @@ export interface Chat {
   is_private: boolean;
   created_at: string;
   displayName?: string;
+  unreadCount?: number;
 }
 
 export interface Message {
