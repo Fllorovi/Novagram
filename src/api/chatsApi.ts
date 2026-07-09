@@ -116,4 +116,74 @@ getReactions: async (messageIds: number[]) => {
   if (error) throw error;
   return data || [];
 },
+// Поиск пользователей по имени или email
+searchUsers: async (query: string, currentUserId: string) => {
+  if (!query.trim() || query.length < 2) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url')
+      .ilike('username', `%${query.trim()}%`)
+      .neq('id', currentUserId)
+      .limit(10);
+
+    if (error) {
+      console.error('Ошибка поиска:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Ошибка поиска:', error);
+    return [];
+  }
+},
+// Создать чат с пользователем
+createChat: async (userId: string, otherUserId: string) => {
+  // Проверяем, есть ли уже чат между этими пользователями
+  const { data: existing, error: findError } = await supabase
+    .from('chat_participants')
+    .select('chat_id')
+    .eq('user_id', userId);
+
+  if (findError) throw findError;
+
+  // Проверяем, есть ли общий чат
+  const chatIds = existing?.map((p) => p.chat_id) || [];
+  if (chatIds.length > 0) {
+    const { data: common, error: commonError } = await supabase
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', otherUserId)
+      .in('chat_id', chatIds);
+
+    if (commonError) throw commonError;
+
+    if (common && common.length > 0) {
+      // Чат уже существует — возвращаем его id
+      return common[0].chat_id;
+    }
+  }
+
+  // Создаём новый чат
+  const { data: newChat, error: createError } = await supabase
+    .from('chats')
+    .insert([{ name: null, is_private: true }])
+    .select()
+    .single();
+
+  if (createError) throw createError;
+
+  // Добавляем участников
+  const { error: participantsError } = await supabase
+    .from('chat_participants')
+    .insert([
+      { chat_id: newChat.id, user_id: userId },
+      { chat_id: newChat.id, user_id: otherUserId },
+    ]);
+
+  if (participantsError) throw participantsError;
+
+  return newChat.id;
+},
 };

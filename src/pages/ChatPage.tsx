@@ -10,6 +10,7 @@ import type { Chat, Message } from '../types/chat.types';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { formatMessageDate } from '../utils/dateUtils';
+import { UserSearch } from '../components/ui/UserSearch';
 
 export const ChatPage = () => {
   const { user, signOut } = useAuthStore();
@@ -139,10 +140,21 @@ export const ChatPage = () => {
     <div className="flex h-screen bg-[var(--bg-primary)]">
       {/* Сайдбар */}
       <aside className="w-80 bg-[var(--bg-secondary)] border-r border-[var(--border)] flex flex-col">
-        <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Чаты</h2>
-          <ThemeToggle />
-        </div>
+<div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
+  <h2 className="text-xl font-semibold text-[var(--text-primary)]">Чаты</h2>
+  <ThemeToggle />
+</div>
+
+{/* 👇 Поиск пользователей */}
+<UserSearch
+  currentUserId={user?.id || ''}
+  onChatCreated={(chatId) => {
+    // Перезагружаем список чатов и открываем новый
+    setSelectedChat(null);
+    // Можно вызвать refreshChats, если добавить в useChats
+    window.location.reload(); // временно
+  }}
+/>
         <ul className="flex-1 overflow-y-auto">
           {chats.map((chat) => (
             <li
