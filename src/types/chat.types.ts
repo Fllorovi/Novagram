@@ -5,6 +5,7 @@ export interface Chat {
   created_at: string;
   displayName?: string;
   unreadCount?: number;
+  avatar_url?: string | null;
 }
 
 export interface Message {

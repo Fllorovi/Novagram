@@ -51,56 +51,58 @@ export const chatsApi = {
     console.log('🔥 Промежуточный результат с unreadCount:', chatsWithUnread);
 
     const chatsWithNames = await Promise.all(
-      chatsWithUnread.map(async (chat) => {
-        const { data: chatParticipants } = await supabase
-          .from('chat_participants')
-          .select('user_id')
-          .eq('chat_id', chat.id);
+  chatsWithUnread.map(async (chat) => {
+    const { data: chatParticipants } = await supabase
+      .from('chat_participants')
+      .select('user_id')
+      .eq('chat_id', chat.id);
 
-        if (!chatParticipants || chatParticipants.length === 0) {
-          return { ...chat, displayName: 'Чат' };
-        }
+    if (!chatParticipants || chatParticipants.length === 0) {
+      return { ...chat, displayName: 'Чат', avatar_url: null };
+    }
 
-        if (chatParticipants.length > 2) {
-          const otherUserIds = chatParticipants
-            .map((p) => p.user_id)
-            .filter((id) => id !== userId);
+    if (chatParticipants.length > 2) {
+      const otherUserIds = chatParticipants
+        .map((p) => p.user_id)
+        .filter((id) => id !== userId);
 
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('username')
-            .in('id', otherUserIds);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .in('id', otherUserIds);
 
-          if (profiles && profiles.length > 0) {
-            const names = profiles.map((p) => p.username).filter(Boolean);
-            return {
-              ...chat,
-              displayName: names.length > 0 ? names.join(', ') : 'Групповой чат',
-            };
-          }
-          return { ...chat, displayName: 'Групповой чат' };
-        }
-
-        const otherUserId = chatParticipants
-          .map((p) => p.user_id)
-          .find((id) => id !== userId);
-
-        if (!otherUserId) {
-          return { ...chat, displayName: 'Чат' };
-        }
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', otherUserId)
-          .single();
-
+      if (profiles && profiles.length > 0) {
+        const names = profiles.map((p) => p.username).filter(Boolean);
         return {
           ...chat,
-          displayName: profile?.username || 'Без имени',
+          displayName: names.length > 0 ? names.join(', ') : 'Групповой чат',
+          avatar_url: null, // для группового пока нет аватарки
         };
-      })
-    );
+      }
+      return { ...chat, displayName: 'Групповой чат', avatar_url: null };
+    }
+
+    const otherUserId = chatParticipants
+      .map((p) => p.user_id)
+      .find((id) => id !== userId);
+
+    if (!otherUserId) {
+      return { ...chat, displayName: 'Чат', avatar_url: null };
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', otherUserId)
+      .single();
+
+    return {
+      ...chat,
+      displayName: profile?.username || 'Без имени',
+      avatar_url: profile?.avatar_url || null, // 👈 вот оно
+    };
+  })
+);
 
     console.log('🔥 Финальный результат с unreadCount:', chatsWithNames);
     return chatsWithNames;
@@ -259,4 +261,34 @@ export const chatsApi = {
 
     if (error) throw error;
   },
+  // Загрузить аватарку
+uploadAvatar: async (userId: string, file: File) => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${userId}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  // Удаляем старую аватарку (если есть)
+  await supabase.storage.from('avatars').remove([filePath]);
+
+  // Загружаем новую
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  // Получаем публичный URL
+  const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+  const avatarUrl = data?.publicUrl || null;
+
+  // Обновляем профиль
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', userId);
+
+  if (updateError) throw updateError;
+
+  return avatarUrl;
+},
 };

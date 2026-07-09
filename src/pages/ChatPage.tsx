@@ -18,7 +18,6 @@ export const ChatPage = () => {
   const { chats, loading: chatsLoading, setChats, refreshChats } = useChats(user?.id || null);
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
-  
 
   const [otherUser, setOtherUser] = useState<{
     username: string | null;
@@ -176,9 +175,11 @@ export const ChatPage = () => {
                 handleDeleteChat(chat.id, chat.displayName || 'Чат');
               }}
             >
-              <div className="w-12 h-12 rounded-full bg-[var(--accent)] flex items-center justify-center text-white mr-4 font-semibold">
-                {chat.displayName?.[0] || 'Ч'}
-              </div>
+              <img
+                src={chat.avatar_url || `https://ui-avatars.com/api/?name=${chat.displayName || 'Ч'}&background=3ECF8E&color=fff&size=48`}
+                alt="Аватар"
+                className="w-12 h-12 rounded-full object-cover mr-4"
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-[var(--text-primary)]">
@@ -196,7 +197,14 @@ export const ChatPage = () => {
         </ul>
 
         <div className="p-4 border-t border-[var(--border)] text-sm text-[var(--text-secondary)] flex items-center justify-between">
-          <span>{user?.username || user?.email || 'Пользователь'}</span>
+          <div className="flex items-center gap-3">
+            <img
+              src={user?.avatar_url || `https://ui-avatars.com/api/?name=${user?.username || 'U'}&background=3ECF8E&color=fff&size=32`}
+              alt="Аватар"
+              className="w-8 h-8 rounded-full object-cover"
+            />
+            <span>{user?.username || user?.email || 'Пользователь'}</span>
+          </div>
           <button
             onClick={handleLogout}
             className="text-red-500 hover:text-red-700 text-xs font-medium"
@@ -210,15 +218,17 @@ export const ChatPage = () => {
         {selectedChat ? (
           <>
             <header
-              className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center"
+              className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-3"
               onContextMenu={(e) => {
                 e.preventDefault();
                 handleDeleteChat(selectedChat.id, otherUser?.username || 'Чат');
               }}
             >
-              <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white mr-4 font-semibold">
-                {otherUser?.username?.[0] || 'Ч'}
-              </div>
+              <img
+                src={otherUser?.avatar_url || `https://ui-avatars.com/api/?name=${otherUser?.username || 'Ч'}&background=3ECF8E&color=fff&size=40`}
+                alt="Аватар"
+                className="w-10 h-10 rounded-full object-cover"
+              />
               <div>
                 <h3 className="font-semibold text-[var(--text-primary)]">
                   {otherUser?.username || 'Чат'}
@@ -248,7 +258,7 @@ export const ChatPage = () => {
                     new Date(messages[index - 1].created_at).toDateString();
 
                 const reactions = getReactionsForMessage(msg.id);
-                
+
                 return (
                   <Fragment key={msg.id}>
                     {showDate && (
@@ -344,5 +354,4 @@ export const ChatPage = () => {
       />
     </div>
   );
-  
 };
