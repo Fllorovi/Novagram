@@ -291,4 +291,22 @@ uploadAvatar: async (userId: string, file: File) => {
 
   return avatarUrl;
 },
+// Загрузить файл в Storage и вернуть публичную ссылку
+uploadFile: async (chatId: number, file: File) => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${chatId}/${Date.now()}.${fileExt}`;
+  const filePath = `chat-files/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('novagram-files')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from('novagram-files').getPublicUrl(filePath);
+  return data?.publicUrl || null;
+},
 };

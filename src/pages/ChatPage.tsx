@@ -326,7 +326,39 @@ export const ChatPage = () => {
                         });
                       }}
                     >
-                      <p className="break-words">{msg.content}</p>
+                      {(() => {
+                        try {
+                          const parsed = JSON.parse(msg.content);
+                          if (parsed.type === 'image') {
+                            return (
+                              <img
+                                src={parsed.url}
+                                alt="Фото"
+                                className="max-w-full rounded-lg cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(parsed.url, '_blank');
+                                }}
+                              />
+                            );
+                          } else if (parsed.type === 'file') {
+                            return (
+                              <a
+                                href={parsed.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-white underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                📎 {parsed.name}
+                              </a>
+                            );
+                          }
+                        } catch {
+                          return <p className="break-words">{msg.content}</p>;
+                        }
+                      })()}
+
                       <span className="text-xs opacity-70 block mt-1">
                         {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
                           hour: '2-digit',
@@ -351,27 +383,74 @@ export const ChatPage = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            <form
-              onSubmit={handleSendMessage}
-              className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex gap-2"
-            >
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  sendTyping();
-                }}
-                placeholder="Напишите сообщение..."
-                className="flex-1 bg-[var(--bg-input)] text-[var(--text-primary)] border border-[var(--border)] rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all min-w-0"
-              />
-              <button
-                type="submit"
-                className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-2 rounded-full transition flex-shrink-0"
-              >
-                ➤
-              </button>
-            </form>
+<form
+  onSubmit={handleSendMessage}
+  className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex gap-2 items-center"
+>
+  <input
+    type="file"
+    id="fileInput"
+    className="hidden"
+    accept="image/*,video/*,application/*"
+    onChange={async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !selectedChat || !user) return;
+
+      try {
+        const fileUrl = await chatsApi.uploadFile(selectedChat.id, file);
+        const content = JSON.stringify({
+          type: file.type.startsWith('image/') ? 'image' : 'file',
+          url: fileUrl,
+          name: file.name,
+        });
+        await chatsApi.sendMessage(selectedChat.id, user.id, content);
+        e.target.value = '';
+      } catch (error) {
+        console.error('Ошибка отправки файла:', error);
+      }
+    }}
+  />
+
+  <button
+    type="button"
+    onClick={() => document.getElementById('fileInput')?.click()}
+    className="bg-[var(--bg-input)] text-[var(--text-primary)] p-2 rounded-full hover:bg-[var(--border)] transition flex items-center justify-center w-10 h-10 flex-shrink-0"
+    title="Прикрепить файл"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
+      />
+    </svg>
+  </button>
+
+  <input
+    type="text"
+    value={newMessage}
+    onChange={(e) => {
+      setNewMessage(e.target.value);
+      sendTyping();
+    }}
+    placeholder="Напишите сообщение..."
+    className="flex-1 bg-[var(--bg-input)] text-[var(--text-primary)] border border-[var(--border)] rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all min-w-0"
+  />
+
+  <button
+    type="submit"
+    className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-2 rounded-full transition flex-shrink-0"
+  >
+    ➤
+  </button>
+</form>
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-[var(--text-muted)] p-4 text-center">
