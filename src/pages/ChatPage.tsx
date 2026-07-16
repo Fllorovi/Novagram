@@ -11,6 +11,7 @@ import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { formatMessageDate } from '../utils/dateUtils';
 import { UserSearch } from '../components/ui/UserSearch';
+import { SidebarMenu } from '../components/sidebar/SidebarMenu';
 
 export const ChatPage = () => {
   const { user, signOut } = useAuthStore();
@@ -19,6 +20,7 @@ export const ChatPage = () => {
   const { messages, loading: messagesLoading } = useRealtimeMessages(selectedChat?.id || null);
   const [newMessage, setNewMessage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [otherUser, setOtherUser] = useState<{
     username: string | null;
@@ -149,7 +151,11 @@ export const ChatPage = () => {
 
   return (
     <div className="flex h-screen bg-[var(--bg-primary)] overflow-hidden">
-      {/* Оверлей для мобилок */}
+      <SidebarMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+      />
+
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -157,36 +163,32 @@ export const ChatPage = () => {
         />
       )}
 
-      {/* Сайдбар */}
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           w-80 bg-[var(--bg-secondary)] border-r border-[var(--border)]
           transform transition-transform duration-300 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0 flex flex-col
+          lg:translate-x-0
+          flex flex-col
         `}
       >
-        <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Чаты</h2>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <button
-              className="lg:hidden text-[var(--text-primary)] p-1"
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              ✕
-            </button>
-          </div>
+        <div className="p-4 border-b border-[var(--border)] flex items-center gap-2">
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="text-[var(--text-primary)] p-1 text-2xl hover:bg-[var(--bg-input)] rounded-lg transition flex-shrink-0"
+            aria-label="Открыть меню"
+          >
+            ☰
+          </button>
+          <UserSearch
+            currentUserId={user?.id || ''}
+            onChatCreated={(chatId) => {
+              setSelectedChat(null);
+              window.location.reload();
+            }}
+          />
         </div>
-
-        <UserSearch
-          currentUserId={user?.id || ''}
-          onChatCreated={(chatId) => {
-            setSelectedChat(null);
-            window.location.reload();
-          }}
-        />
 
         <ul className="flex-1 overflow-y-auto">
           {chats.map((chat) => (
@@ -243,46 +245,47 @@ export const ChatPage = () => {
         </div>
       </aside>
 
-      {/* Основная область */}
       <main className="flex-1 flex flex-col bg-[var(--bg-primary)] min-w-0">
         <header className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-3">
-          <button
-            className="lg:hidden text-[var(--text-primary)] p-1 text-2xl"
-            onClick={() => setIsSidebarOpen(true)}
-            aria-label="Открыть меню"
-          >
-            ☰
-          </button>
-          {selectedChat ? (
-            <>
-              <img
-                src={otherUser?.avatar_url || `https://ui-avatars.com/api/?name=${otherUser?.username || 'Ч'}&background=3ECF8E&color=fff&size=40`}
-                alt="Аватар"
-                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-[var(--text-primary)] truncate">
-                  {otherUser?.username || 'Чат'}
-                </h3>
-                <span className="text-xs">
-                  {onlineUsers.length > 0 ? (
-                    <span className="text-[var(--accent)]">онлайн</span>
-                  ) : (
-                    <span className="text-[var(--text-muted)]">офлайн</span>
-                  )}
-                  {isTyping && (
-                    <span className="text-[var(--accent)] ml-2">печатает...</span>
-                  )}
-                </span>
-              </div>
-            </>
+  {/* 👇 БУРГЕР ДЛЯ МОБИЛОК */}
+  <button
+    className="lg:hidden text-[var(--text-primary)] p-1 text-2xl hover:bg-[var(--bg-input)] rounded-lg transition flex-shrink-0"
+    onClick={() => setIsSidebarOpen(true)}
+    aria-label="Открыть чаты"
+  >
+    ☰
+  </button>
+
+  {selectedChat ? (
+    <>
+      <img
+        src={otherUser?.avatar_url || `https://ui-avatars.com/api/?name=${otherUser?.username || 'Ч'}&background=3ECF8E&color=fff&size=40`}
+        alt="Аватар"
+        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+      />
+      <div className="min-w-0 flex-1">
+        <h3 className="font-semibold text-[var(--text-primary)] truncate">
+          {otherUser?.username || 'Чат'}
+        </h3>
+        <span className="text-xs">
+          {onlineUsers.length > 0 ? (
+            <span className="text-[var(--accent)]">онлайн</span>
           ) : (
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-[var(--text-primary)]">Novagram</h3>
-              <span className="text-xs text-[var(--text-muted)]">Выберите чат</span>
-            </div>
+            <span className="text-[var(--text-muted)]">офлайн</span>
           )}
-        </header>
+          {isTyping && (
+            <span className="text-[var(--accent)] ml-2">печатает...</span>
+          )}
+        </span>
+      </div>
+    </>
+  ) : (
+    <div className="min-w-0 flex-1">
+      <h3 className="font-semibold text-[var(--text-primary)]">Novagram</h3>
+      <span className="text-xs text-[var(--text-muted)]">Выберите чат</span>
+    </div>
+  )}
+</header>
 
         {selectedChat ? (
           <>
@@ -383,74 +386,74 @@ export const ChatPage = () => {
               <div ref={messagesEndRef} />
             </div>
 
-<form
-  onSubmit={handleSendMessage}
-  className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex gap-2 items-center"
->
-  <input
-    type="file"
-    id="fileInput"
-    className="hidden"
-    accept="image/*,video/*,application/*"
-    onChange={async (e) => {
-      const file = e.target.files?.[0];
-      if (!file || !selectedChat || !user) return;
+            <form
+              onSubmit={handleSendMessage}
+              className="p-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex gap-2 items-center"
+            >
+              <input
+                type="file"
+                id="fileInput"
+                className="hidden"
+                accept="image/*,video/*,application/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !selectedChat || !user) return;
 
-      try {
-        const fileUrl = await chatsApi.uploadFile(selectedChat.id, file);
-        const content = JSON.stringify({
-          type: file.type.startsWith('image/') ? 'image' : 'file',
-          url: fileUrl,
-          name: file.name,
-        });
-        await chatsApi.sendMessage(selectedChat.id, user.id, content);
-        e.target.value = '';
-      } catch (error) {
-        console.error('Ошибка отправки файла:', error);
-      }
-    }}
-  />
+                  try {
+                    const fileUrl = await chatsApi.uploadFile(selectedChat.id, file);
+                    const content = JSON.stringify({
+                      type: file.type.startsWith('image/') ? 'image' : 'file',
+                      url: fileUrl,
+                      name: file.name,
+                    });
+                    await chatsApi.sendMessage(selectedChat.id, user.id, content);
+                    e.target.value = '';
+                  } catch (error) {
+                    console.error('Ошибка отправки файла:', error);
+                  }
+                }}
+              />
 
-  <button
-    type="button"
-    onClick={() => document.getElementById('fileInput')?.click()}
-    className="bg-[var(--bg-input)] text-[var(--text-primary)] p-2 rounded-full hover:bg-[var(--border)] transition flex items-center justify-center w-10 h-10 flex-shrink-0"
-    title="Прикрепить файл"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={2}
-      stroke="currentColor"
-      className="w-5 h-5"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
-      />
-    </svg>
-  </button>
+              <button
+                type="button"
+                onClick={() => document.getElementById('fileInput')?.click()}
+                className="bg-[var(--bg-input)] text-[var(--text-primary)] p-2 rounded-full hover:bg-[var(--border)] transition flex items-center justify-center w-10 h-10 flex-shrink-0"
+                title="Прикрепить файл"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
+                  />
+                </svg>
+              </button>
 
-  <input
-    type="text"
-    value={newMessage}
-    onChange={(e) => {
-      setNewMessage(e.target.value);
-      sendTyping();
-    }}
-    placeholder="Напишите сообщение..."
-    className="flex-1 bg-[var(--bg-input)] text-[var(--text-primary)] border border-[var(--border)] rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all min-w-0"
-  />
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  sendTyping();
+                }}
+                placeholder="Напишите сообщение..."
+                className="flex-1 bg-[var(--bg-input)] text-[var(--text-primary)] border border-[var(--border)] rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all min-w-0"
+              />
 
-  <button
-    type="submit"
-    className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-2 rounded-full transition flex-shrink-0"
-  >
-    ➤
-  </button>
-</form>
+              <button
+                type="submit"
+                className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-2 rounded-full transition flex-shrink-0"
+              >
+                ➤
+              </button>
+            </form>
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-[var(--text-muted)] p-4 text-center">
