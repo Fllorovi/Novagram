@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ChatPage } from './pages/ChatPage';
 import { useEffect } from 'react';
+import { ProfilePage } from './pages/ProfilePage';
 
 function App() {
   const { user, isLoading } = useAuthStore();
@@ -27,6 +28,7 @@ function App() {
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <BrowserRouter>
         <Routes>
+          <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" />} />
           <Route path="/" element={user ? <ChatPage /> : <Navigate to="/login" />} />
           <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
           <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />

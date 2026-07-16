@@ -2,31 +2,25 @@ import { supabase } from './supabaseClient';
 
 export const chatsApi = {
   getChats: async (userId: string) => {
-    console.log('🔍 1. Получаем chat_participants для userId:', userId);
-
     const { data: participants, error: err1 } = await supabase
       .from('chat_participants')
       .select('chat_id')
       .eq('user_id', userId);
 
-    console.log('📋 2. participants:', participants);
-    if (err1) console.error('❌ 3. Ошибка participants:', err1);
+    if (err1) throw err1;
 
     if (!participants || participants.length === 0) {
-      console.log('⚠️ 4. Нет участников, возвращаем []');
       return [];
     }
 
     const chatIds = participants.map((p: any) => p.chat_id);
-    console.log('🔢 5. chatIds:', chatIds);
 
     const { data: chats, error: err2 } = await supabase
       .from('chats')
       .select('*')
       .in('id', chatIds);
 
-    console.log('📦 6. chats:', chats);
-    if (err2) console.error('❌ 7. Ошибка chats:', err2);
+    if (err2) throw err2;
 
     if (!chats) return [];
 
@@ -48,63 +42,60 @@ export const chatsApi = {
       })
     );
 
-    console.log('🔥 Промежуточный результат с unreadCount:', chatsWithUnread);
-
     const chatsWithNames = await Promise.all(
-  chatsWithUnread.map(async (chat) => {
-    const { data: chatParticipants } = await supabase
-      .from('chat_participants')
-      .select('user_id')
-      .eq('chat_id', chat.id);
+      chatsWithUnread.map(async (chat) => {
+        const { data: chatParticipants } = await supabase
+          .from('chat_participants')
+          .select('user_id')
+          .eq('chat_id', chat.id);
 
-    if (!chatParticipants || chatParticipants.length === 0) {
-      return { ...chat, displayName: 'Чат', avatar_url: null };
-    }
+        if (!chatParticipants || chatParticipants.length === 0) {
+          return { ...chat, displayName: 'Чат', avatar_url: null };
+        }
 
-    if (chatParticipants.length > 2) {
-      const otherUserIds = chatParticipants
-        .map((p) => p.user_id)
-        .filter((id) => id !== userId);
+        if (chatParticipants.length > 2) {
+          const otherUserIds = chatParticipants
+            .map((p) => p.user_id)
+            .filter((id) => id !== userId);
 
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .in('id', otherUserIds);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .in('id', otherUserIds);
 
-      if (profiles && profiles.length > 0) {
-        const names = profiles.map((p) => p.username).filter(Boolean);
+          if (profiles && profiles.length > 0) {
+            const names = profiles.map((p) => p.username).filter(Boolean);
+            return {
+              ...chat,
+              displayName: names.length > 0 ? names.join(', ') : 'Групповой чат',
+              avatar_url: null,
+            };
+          }
+          return { ...chat, displayName: 'Групповой чат', avatar_url: null };
+        }
+
+        const otherUserId = chatParticipants
+          .map((p) => p.user_id)
+          .find((id) => id !== userId);
+
+        if (!otherUserId) {
+          return { ...chat, displayName: 'Чат', avatar_url: null };
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', otherUserId)
+          .single();
+
         return {
           ...chat,
-          displayName: names.length > 0 ? names.join(', ') : 'Групповой чат',
-          avatar_url: null, // для группового пока нет аватарки
+          displayName: profile?.username || 'Без имени',
+          avatar_url: profile?.avatar_url || null,
         };
-      }
-      return { ...chat, displayName: 'Групповой чат', avatar_url: null };
-    }
+      })
+    );
 
-    const otherUserId = chatParticipants
-      .map((p) => p.user_id)
-      .find((id) => id !== userId);
-
-    if (!otherUserId) {
-      return { ...chat, displayName: 'Чат', avatar_url: null };
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', otherUserId)
-      .single();
-
-    return {
-      ...chat,
-      displayName: profile?.username || 'Без имени',
-      avatar_url: profile?.avatar_url || null, // 👈 вот оно
-    };
-  })
-);
-
-    console.log('🔥 Финальный результат с unreadCount:', chatsWithNames);
     return chatsWithNames;
   },
 
@@ -261,52 +252,43 @@ export const chatsApi = {
 
     if (error) throw error;
   },
-  // Загрузить аватарку
-uploadAvatar: async (userId: string, file: File) => {
+
+  uploadAvatar: async (userId: string, file: File) => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}.${fileExt}`;
-  const filePath = `${fileName}`;
+  const filePath = `avatars/${fileName}`;
 
-  // Удаляем старую аватарку (если есть)
   await supabase.storage.from('avatars').remove([filePath]);
 
-  // Загружаем новую
   const { error: uploadError } = await supabase.storage
     .from('avatars')
     .upload(filePath, file, { upsert: true });
 
   if (uploadError) throw uploadError;
 
-  // Получаем публичный URL
   const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
   const avatarUrl = data?.publicUrl || null;
 
-  // Обновляем профиль
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ avatar_url: avatarUrl })
-    .eq('id', userId);
-
-  if (updateError) throw updateError;
+  await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', userId);
 
   return avatarUrl;
 },
-// Загрузить файл в Storage и вернуть публичную ссылку
-uploadFile: async (chatId: number, file: File) => {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${chatId}/${Date.now()}.${fileExt}`;
-  const filePath = `chat-files/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from('novagram-files')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false,
-    });
+  uploadFile: async (chatId: number, file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${chatId}/${Date.now()}.${fileExt}`;
+    const filePath = `chat-files/${fileName}`;
 
-  if (uploadError) throw uploadError;
+    const { error: uploadError } = await supabase.storage
+      .from('novagram-files')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
-  const { data } = supabase.storage.from('novagram-files').getPublicUrl(filePath);
-  return data?.publicUrl || null;
-},
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('novagram-files').getPublicUrl(filePath);
+    return data?.publicUrl || null;
+  },
 };

@@ -1,7 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface SidebarMenuProps {
   isOpen: boolean;
@@ -52,9 +52,13 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({ isOpen, onClose }) => 
 
         <ul className="mt-8 space-y-2">
           <li>
-            <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] text-[var(--text-primary)] transition">
+            <Link
+              to="/profile"
+              onClick={onClose}
+              className="w-full text-left px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] text-[var(--text-primary)] transition block"
+            >
               👤 Мой профиль
-            </button>
+            </Link>
           </li>
           <li>
             <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] text-[var(--text-primary)] transition">
@@ -62,7 +66,6 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({ isOpen, onClose }) => 
             </button>
           </li>
 
-          {/* iOS-переключатель темы */}
           <li className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] transition">
             <span className="text-[var(--text-primary)]">🌙 Тёмная тема</span>
             <button
