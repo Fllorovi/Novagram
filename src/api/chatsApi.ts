@@ -74,25 +74,26 @@ export const chatsApi = {
           return { ...chat, displayName: 'Групповой чат', avatar_url: null };
         }
 
-        const otherUserId = chatParticipants
-          .map((p) => p.user_id)
-          .find((id) => id !== userId);
+const otherUserId = chatParticipants
+  .map((p) => p.user_id)
+  .find((id) => id !== userId);
 
-        if (!otherUserId) {
-          return { ...chat, displayName: 'Чат', avatar_url: null };
-        }
+if (!otherUserId) {
+  return { ...chat, displayName: 'Чат', avatar_url: null, otherUserId: null };
+}
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', otherUserId)
-          .single();
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('username, avatar_url')
+  .eq('id', otherUserId)
+  .single();
 
-        return {
-          ...chat,
-          displayName: profile?.username || 'Без имени',
-          avatar_url: profile?.avatar_url || null,
-        };
+return {
+  ...chat,
+  displayName: profile?.username || 'Без имени',
+  avatar_url: profile?.avatar_url || null,
+  otherUserId: otherUserId,
+};
       })
     );
 

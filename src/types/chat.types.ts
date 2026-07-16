@@ -6,6 +6,7 @@ export interface Chat {
   displayName?: string;
   unreadCount?: number;
   avatar_url?: string | null;
+  otherUserId?: string;
 }
 
 export interface Message {

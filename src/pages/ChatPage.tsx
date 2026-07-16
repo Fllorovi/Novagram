@@ -12,6 +12,7 @@ import { ReactionPicker } from '../components/ui/ReactionPicker';
 import { formatMessageDate } from '../utils/dateUtils';
 import { UserSearch } from '../components/ui/UserSearch';
 import { SidebarMenu } from '../components/sidebar/SidebarMenu';
+import { UserProfileModal } from '../components/ui/UserProfileModal';
 
 export const ChatPage = () => {
   const { user, signOut } = useAuthStore();
@@ -21,11 +22,24 @@ export const ChatPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const [otherUser, setOtherUser] = useState<{
-    username: string | null;
-    avatar_url: string | null;
-  } | null>(null);
+  const [profileModal, setProfileModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    username: string;
+    avatarUrl: string | null;
+    bio: string | null;
+  }>({
+    isOpen: false,
+    userId: '',
+    username: '',
+    avatarUrl: null,
+    bio: null,
+  });
+const [otherUser, setOtherUser] = useState<{
+  username: string | null;
+  avatar_url: string | null;
+  user_id?: string;
+} | null>(null);
 
   const { onlineUsers, isTyping, sendTyping } = usePresence(
     selectedChat?.id || null,
@@ -73,38 +87,39 @@ export const ChatPage = () => {
     markAndRefresh();
 
     const loadOtherUser = async () => {
-      const { data: participants, error: err1 } = await supabase
-        .from('chat_participants')
-        .select('user_id')
-        .eq('chat_id', selectedChat.id);
+  const { data: participants, error: err1 } = await supabase
+    .from('chat_participants')
+    .select('user_id')
+    .eq('chat_id', selectedChat.id);
 
-      if (err1 || !participants) return;
+  if (err1 || !participants) return;
 
-      const otherUserId = participants
-        .map((p) => p.user_id)
-        .find((id) => id !== user.id);
+  const otherUserId = participants
+    .map((p) => p.user_id)
+    .find((id) => id !== user.id);
 
-      if (!otherUserId) {
-        setOtherUser(null);
-        return;
-      }
+  if (!otherUserId) {
+    setOtherUser(null);
+    return;
+  }
 
-      const { data: profile, error: err2 } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', otherUserId)
-        .single();
+  const { data: profile, error: err2 } = await supabase
+    .from('profiles')
+    .select('username, avatar_url')
+    .eq('id', otherUserId)
+    .single();
 
-      if (err2 || !profile) {
-        setOtherUser(null);
-        return;
-      }
+  if (err2 || !profile) {
+    setOtherUser(null);
+    return;
+  }
 
-      setOtherUser({
-        username: profile.username || 'Без имени',
-        avatar_url: profile.avatar_url || null,
-      });
-    };
+  setOtherUser({
+    username: profile.username || 'Без имени',
+    avatar_url: profile.avatar_url || null,
+    user_id: otherUserId,
+  });
+};
 
     loadOtherUser();
   }, [selectedChat, user]);
@@ -138,6 +153,36 @@ export const ChatPage = () => {
         console.error('Ошибка удаления чата:', error);
         alert('Не удалось удалить чат.');
       }
+    }
+  };
+
+  const handleOpenProfile = async (chat: Chat) => {
+    const otherUserId = chat.otherUserId;
+    if (!otherUserId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, bio')
+        .eq('id', otherUserId)
+        .single();
+
+      if (error) {
+        console.error('Ошибка загрузки профиля:', error);
+        return;
+      }
+
+      if (data) {
+        setProfileModal({
+          isOpen: true,
+          userId: data.id,
+          username: data.username || 'Пользователь',
+          avatarUrl: data.avatar_url,
+          bio: data.bio || null,
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка:', error);
     }
   };
 
@@ -192,20 +237,20 @@ export const ChatPage = () => {
 
         <ul className="flex-1 overflow-y-auto">
           {chats.map((chat) => (
-            <li
-              key={chat.id}
-              className={`flex items-center p-4 cursor-pointer hover:bg-[var(--bg-input)] border-b border-[var(--border)] ${
-                selectedChat?.id === chat.id ? 'bg-[var(--bg-input)]' : ''
-              }`}
-              onClick={() => {
-                setSelectedChat(chat);
-                setIsSidebarOpen(false);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                handleDeleteChat(chat.id, chat.displayName || 'Чат');
-              }}
-            >
+<li
+  key={chat.id}
+  className={`flex items-center p-4 cursor-pointer hover:bg-[var(--bg-input)] border-b border-[var(--border)] ${
+    selectedChat?.id === chat.id ? 'bg-[var(--bg-input)]' : ''
+  }`}
+  onClick={() => {
+    setSelectedChat(chat);
+    setIsSidebarOpen(false);
+  }}
+  onContextMenu={(e) => {
+    e.preventDefault();
+    handleDeleteChat(chat.id, chat.displayName || 'Чат');
+  }}
+>
               <img
                 src={chat.avatar_url || `https://ui-avatars.com/api/?name=${chat.displayName || 'Ч'}&background=3ECF8E&color=fff&size=48`}
                 alt="Аватар"
@@ -246,11 +291,34 @@ export const ChatPage = () => {
       </aside>
 
       <main className="flex-1 flex flex-col bg-[var(--bg-primary)] min-w-0">
-        <header className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-3">
-  {/* 👇 БУРГЕР ДЛЯ МОБИЛОК */}
+        <header
+  className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-3 cursor-pointer hover:bg-[var(--bg-input)] transition"
+  onClick={async () => {
+    if (!selectedChat || !otherUser?.user_id) return;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url, bio')
+      .eq('id', otherUser.user_id)
+      .single();
+
+    if (data) {
+      setProfileModal({
+        isOpen: true,
+        userId: data.id,
+        username: data.username || 'Пользователь',
+        avatarUrl: data.avatar_url,
+        bio: data.bio || null,
+      });
+    }
+  }}
+>
+  {/* Бургер для мобилок */}
   <button
     className="lg:hidden text-[var(--text-primary)] p-1 text-2xl hover:bg-[var(--bg-input)] rounded-lg transition flex-shrink-0"
-    onClick={() => setIsSidebarOpen(true)}
+    onClick={(e) => {
+      e.stopPropagation();
+      setIsSidebarOpen(true);
+    }}
     aria-label="Открыть чаты"
   >
     ☰
@@ -473,6 +541,15 @@ export const ChatPage = () => {
           }
         }}
         position={{ x: reactionPicker.x, y: reactionPicker.y }}
+      />
+
+      <UserProfileModal
+        isOpen={profileModal.isOpen}
+        onClose={() => setProfileModal({ ...profileModal, isOpen: false })}
+        userId={profileModal.userId}
+        username={profileModal.username}
+        avatarUrl={profileModal.avatarUrl}
+        bio={profileModal.bio}
       />
     </div>
   );
