@@ -33,10 +33,10 @@ export const RegisterPage: React.FC = () => {
 
     try {
       await signUp(email.trim(), password.trim());
-      navigate('/');
+      setError('✅ На вашу почту отправлена ссылка для подтверждения. Проверьте почту!');
+      setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Ошибка регистрации');
-    } finally {
       setLoading(false);
     }
   };
@@ -119,7 +119,12 @@ export const RegisterPage: React.FC = () => {
             </button>
           </div>
 
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          {error && (
+            <p className={`text-sm mb-4 ${error.startsWith('✅') ? 'text-green-500' : 'text-red-500'}`}>
+              {error}
+            </p>
+          )}
+
           <Button
             type="submit"
             fullWidth
