@@ -201,9 +201,9 @@ export const ChatPage = () => {
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Хедер для списка чатов (показывается только когда чат НЕ выбран) */}
+        {/* Хедер с бургером и поиском — ТОЛЬКО НА МОБИЛКАХ, когда чат НЕ выбран */}
         {!selectedChat && (
-          <header className="p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-2">
+          <header className="md:hidden p-4 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-2">
             <button
               className="text-[var(--text-primary)] p-1 text-2xl hover:bg-[var(--bg-input)] rounded-lg transition flex-shrink-0"
               onClick={() => setIsMenuOpen(true)}
@@ -224,12 +224,33 @@ export const ChatPage = () => {
         )}
 
         <div className="flex-1 flex overflow-hidden">
+          {/* Сайдбар — на ПК всегда, на мобилке скрывается при выборе чата */}
           <aside
             className={`
               w-full md:w-80 bg-[var(--bg-secondary)] border-r border-[var(--border)] flex flex-col overflow-hidden
               ${selectedChat ? 'hidden md:flex' : 'flex'}
             `}
           >
+            {/* Хедер списка чатов — ТОЛЬКО НА ПК */}
+            <header className="hidden md:flex p-4 border-b border-[var(--border)] items-center gap-2">
+              <button
+                className="text-[var(--text-primary)] p-1 text-2xl hover:bg-[var(--bg-input)] rounded-lg transition flex-shrink-0"
+                onClick={() => setIsMenuOpen(true)}
+                aria-label="Открыть меню"
+              >
+                ☰
+              </button>
+              <div className="flex-1">
+                <UserSearch
+                  currentUserId={user?.id || ''}
+                  onChatCreated={(chatId) => {
+                    setSelectedChat(null);
+                    window.location.reload();
+                  }}
+                />
+              </div>
+            </header>
+
             <ul className="flex-1 overflow-y-auto">
               {chats.map((chat) => (
                 <li
@@ -282,6 +303,7 @@ export const ChatPage = () => {
             </div>
           </aside>
 
+          {/* Окно чата */}
           <main
             className={`
               flex-1 flex flex-col bg-[var(--bg-primary)] min-w-0
@@ -313,28 +335,28 @@ export const ChatPage = () => {
                 >
                   {/* Стрелка назад (только на мобилках) */}
                   <button
-  className="md:hidden text-[var(--text-primary)] p-1 rounded-full hover:bg-[var(--bg-input)] transition flex items-center justify-center w-10 h-10"
-  onClick={(e) => {
-    e.stopPropagation();
-    setSelectedChat(null);
-  }}
-  aria-label="Назад к чатам"
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={2}
-    stroke="currentColor"
-    className="w-6 h-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-    />
-  </svg>
-</button>
+                    className="md:hidden text-[var(--text-primary)] p-1 rounded-full hover:bg-[var(--bg-input)] transition flex items-center justify-center w-10 h-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedChat(null);
+                    }}
+                    aria-label="Назад к чатам"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      className="w-6 h-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                      />
+                    </svg>
+                  </button>
 
                   <img
                     src={otherUser?.avatar_url || `https://ui-avatars.com/api/?name=${otherUser?.username || 'Ч'}&background=3ECF8E&color=fff&size=40`}
