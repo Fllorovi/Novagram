@@ -13,12 +13,6 @@
   <img src="https://img.shields.io/badge/Zustand-000000?style=for-the-badge&logo=react&logoColor=white" />
 </p>
 
-<p align="center">
-  <a href="https://novagram-omega.vercel.app">
-    <img src="https://img.shields.io/badge/demo-live?style=for-the-badge&color=3ECF8E&label=Попробовать" />
-  </a>
-</p>
-
 ---
 
 ## 🚀 О проекте
