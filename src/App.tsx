@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ChatPage } from './pages/ChatPage';
 import { useEffect } from 'react';
+import { checkForUpdate } from './utils/updater';
 import { ProfilePage } from './pages/ProfilePage';
 
 function App() {
@@ -13,8 +14,25 @@ function App() {
 
   // Принудительно устанавливаем data-theme на корневой элемент
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  document.documentElement.setAttribute('data-theme', theme);
+}, [theme]);
+useEffect(() => {
+  const checkUpdate = async () => {
+    const update = await checkForUpdate();
+
+    if (update) {
+      console.log(
+        `Novagram: доступно обновление ${update.currentVersion} → ${update.latestVersion}`
+      );
+      console.log('APK:', update.apkUrl);
+      console.log('Изменения:', update.releaseNotes);
+    } else {
+      console.log('Novagram: обновлений нет');
+    }
+  };
+
+  checkUpdate();
+}, []);
 
   if (isLoading) {
     return (
@@ -37,5 +55,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
