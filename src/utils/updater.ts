@@ -44,6 +44,12 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 
     // v1.0.1 → 1.0.1
     const latestVersion = release.tag_name.replace(/^v/, '');
+    console.log('UPDATE DEBUG:', {
+  currentVersion,
+  latestVersion,
+  tagName: release.tag_name,
+});
+    
 
     // Ищем APK среди Assets релиза
     const apkAsset = release.assets.find(
@@ -52,6 +58,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 
     // Если установленная версия уже актуальная — обновление не нужно
     if (!isNewerVersion(latestVersion, currentVersion)) {
+        console.log('UPDATE DEBUG: версия уже актуальна');
       return null;
     }
 

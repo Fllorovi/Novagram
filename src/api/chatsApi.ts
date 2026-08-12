@@ -110,15 +110,51 @@ return {
     return data || [];
   },
 
-  sendMessage: async (chatId: number, senderId: string, content: string) => {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([{ chat_id: chatId, sender_id: senderId, content }])
-      .select('*, profiles(username, avatar_url)')
-      .single();
-    if (error) throw error;
-    return data;
-  },
+sendMessage: async (
+  chatId: number,
+  senderId: string,
+  content: string,
+) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert([
+      {
+        chat_id: chatId,
+        sender_id: senderId,
+        content,
+      },
+    ])
+    .select('*, profiles(username, avatar_url)')
+    .single();
+
+  if (error) throw error;
+
+  // Отправляем push-уведомление получателю
+  try {
+    const { error: pushError } =
+      await supabase.functions.invoke('send-message-push', {
+        body: {
+          chatId,
+          senderId,
+          message: content,
+        },
+      });
+
+    if (pushError) {
+      console.error(
+        '❌ Ошибка отправки push:',
+        pushError,
+      );
+    }
+  } catch (pushError) {
+    console.error(
+      '❌ Не удалось вызвать send-message-push:',
+      pushError,
+    );
+  }
+
+  return data;
+},
 
   deleteChat: async (chatId: number) => {
     const { error: err1 } = await supabase

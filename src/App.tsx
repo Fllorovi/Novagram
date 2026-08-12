@@ -4,30 +4,36 @@ import { useThemeStore } from './store/themeStore';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ChatPage } from './pages/ChatPage';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { UpdateModal } from './components/ui/UpdateModal';
+import type { UpdateInfo } from './utils/updater';
 import { checkForUpdate } from './utils/updater';
 import { ProfilePage } from './pages/ProfilePage';
+import { initPushNotifications } from './utils/pushNotifications';
 
 function App() {
   const { user, isLoading } = useAuthStore();
   const { theme } = useThemeStore();
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
 
   // Принудительно устанавливаем data-theme на корневой элемент
   useEffect(() => {
   document.documentElement.setAttribute('data-theme', theme);
 }, [theme]);
 useEffect(() => {
+  initPushNotifications();
+}, []);
+useEffect(() => {
   const checkUpdate = async () => {
-    const update = await checkForUpdate();
+    console.log('UPDATE: начинаем проверку');
 
-    if (update) {
-      console.log(
-        `Novagram: доступно обновление ${update.currentVersion} → ${update.latestVersion}`
-      );
-      console.log('APK:', update.apkUrl);
-      console.log('Изменения:', update.releaseNotes);
-    } else {
-      console.log('Novagram: обновлений нет');
+    const updateInfo = await checkForUpdate();
+
+    console.log('UPDATE: результат:', updateInfo);
+
+    if (updateInfo) {
+      console.log('UPDATE: вызываем setUpdate');
+      setUpdate(updateInfo);
     }
   };
 
@@ -42,9 +48,16 @@ useEffect(() => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-bg-primary text-text-primary">
-      <BrowserRouter>
+return (
+  <div className="min-h-screen bg-bg-primary text-text-primary">
+    {update && (
+      <UpdateModal
+        update={update}
+        onClose={() => setUpdate(null)}
+      />
+    )}
+
+    <BrowserRouter>
         <Routes>
           <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" />} />
           <Route path="/" element={user ? <ChatPage /> : <Navigate to="/login" />} />
