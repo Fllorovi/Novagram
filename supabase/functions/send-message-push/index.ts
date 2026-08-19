@@ -1,8 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json',
+};
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')!;
+const supabaseServiceRoleKey = Deno.env.get(
+  'SUPABASE_SERVICE_ROLE_KEY',
+)!;
+const firebaseServiceAccountBase64 = Deno.env.get(
+  'FIREBASE_SERVICE_ACCOUNT_BASE64',
+)!;
 
 const supabase = createClient(
   supabaseUrl,
@@ -45,8 +57,13 @@ async function createFirebaseAccessToken(
       .replace(/\//g, '_')
       .replace(/=+$/, '');
 
-  const encodedHeader = base64UrlEncode(JSON.stringify(header));
-  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const encodedHeader = base64UrlEncode(
+    JSON.stringify(header),
+  );
+
+  const encodedPayload = base64UrlEncode(
+    JSON.stringify(payload),
+  );
 
   const signingInput = `${encodedHeader}.${encodedPayload}`;
 
@@ -78,7 +95,9 @@ async function createFirebaseAccessToken(
   );
 
   const signatureBase64 = base64UrlEncode(
-    String.fromCharCode(...new Uint8Array(signature)),
+    String.fromCharCode(
+      ...new Uint8Array(signature),
+    ),
   );
 
   const jwt = `${signingInput}.${signatureBase64}`;
@@ -88,7 +107,8 @@ async function createFirebaseAccessToken(
     {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type':
+          'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
         grant_type:
@@ -100,7 +120,9 @@ async function createFirebaseAccessToken(
 
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
-    throw new Error(`Firebase OAuth error: ${errorText}`);
+    throw new Error(
+      `Firebase OAuth error: ${errorText}`,
+    );
   }
 
   const tokenData = await tokenResponse.json();
@@ -109,6 +131,14 @@ async function createFirebaseAccessToken(
 }
 
 Deno.serve(async (req) => {
+  // Обрабатываем CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      status: 200,
+      headers: corsHeaders,
+    });
+  }
+
   try {
     if (req.method !== 'POST') {
       return new Response(
@@ -117,9 +147,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 405,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
         },
       );
     }
@@ -133,13 +161,12 @@ Deno.serve(async (req) => {
     ) {
       return new Response(
         JSON.stringify({
-          error: 'chatId, senderId and message are required',
+          error:
+            'chatId, senderId and message are required',
         }),
         {
           status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
         },
       );
     }
@@ -149,18 +176,25 @@ Deno.serve(async (req) => {
     );
 
     // Получаем участников чата
-    const { data: participants, error: participantsError } =
-      await supabase
-        .from('chat_participants')
-        .select('user_id')
-        .eq('chat_id', body.chatId);
+    const {
+      data: participants,
+      error: participantsError,
+    } = await supabase
+      .from('chat_participants')
+      .select('user_id')
+      .eq('chat_id', body.chatId);
 
     if (participantsError) {
       throw participantsError;
     }
 
-    if (!participants || participants.length === 0) {
-      console.log('⚠️ Участники чата не найдены');
+    if (
+      !participants ||
+      participants.length === 0
+    ) {
+      console.log(
+        '⚠️ Участники чата не найдены',
+      );
 
       return new Response(
         JSON.stringify({
@@ -169,20 +203,24 @@ Deno.serve(async (req) => {
         }),
         {
           status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
         },
       );
     }
 
     // Для личного чата получатель — второй участник
     const recipientIds = participants
-      .map((participant) => participant.user_id)
-      .filter((userId) => userId !== body.senderId);
+      .map(
+        (participant) => participant.user_id,
+      )
+      .filter(
+        (userId) => userId !== body.senderId,
+      );
 
     if (recipientIds.length === 0) {
-      console.log('⚠️ Получатель сообщения не найден');
+      console.log(
+        '⚠️ Получатель сообщения не найден',
+      );
 
       return new Response(
         JSON.stringify({
@@ -191,9 +229,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
         },
       );
     }
@@ -203,28 +239,34 @@ Deno.serve(async (req) => {
     );
 
     // Получаем имя отправителя
-    const { data: senderProfile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', body.senderId)
-      .single();
+    const { data: senderProfile } =
+      await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', body.senderId)
+        .single();
 
     const senderName =
-      senderProfile?.username || 'Новое сообщение';
+      senderProfile?.username ||
+      'Новое сообщение';
 
     // Получаем FCM-токены получателя
-    const { data: tokens, error: tokensError } =
-      await supabase
-        .from('push_tokens')
-        .select('id, token, platform')
-        .in('user_id', recipientIds);
+    const {
+      data: tokens,
+      error: tokensError,
+    } = await supabase
+      .from('push_tokens')
+      .select('id, token, platform')
+      .in('user_id', recipientIds);
 
     if (tokensError) {
       throw tokensError;
     }
 
     if (!tokens || tokens.length === 0) {
-      console.log('⚠️ FCM-токены получателя не найдены');
+      console.log(
+        '⚠️ FCM-токены получателя не найдены',
+      );
 
       return new Response(
         JSON.stringify({
@@ -233,18 +275,25 @@ Deno.serve(async (req) => {
         }),
         {
           status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
         },
       );
     }
 
-    const serviceAccount: FirebaseServiceAccount =
-      JSON.parse(firebaseServiceAccountRaw);
+const serviceAccountJson = new TextDecoder().decode(
+  Uint8Array.from(
+    atob(firebaseServiceAccountBase64),
+    (char) => char.charCodeAt(0),
+  ),
+);
+
+const serviceAccount: FirebaseServiceAccount =
+  JSON.parse(serviceAccountJson);
 
     const accessToken =
-      await createFirebaseAccessToken(serviceAccount);
+      await createFirebaseAccessToken(
+        serviceAccount,
+      );
 
     let sent = 0;
 
@@ -299,7 +348,8 @@ Deno.serve(async (req) => {
           `✅ FCM успешно отправлен для token id=${tokenRow.id}`,
         );
       } else {
-        const errorText = await response.text();
+        const errorText =
+          await response.text();
 
         console.error(
           `❌ FCM error для token id=${tokenRow.id}:`,
@@ -315,9 +365,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: corsHeaders,
       },
     );
   } catch (error) {
@@ -335,9 +383,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: corsHeaders,
       },
     );
   }

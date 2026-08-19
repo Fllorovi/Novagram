@@ -130,6 +130,11 @@ sendMessage: async (
   if (error) throw error;
 
   // Отправляем push-уведомление получателю
+  console.log('🚀 Вызов send-message-push:', {
+  chatId,
+  senderId,
+  message: content,
+});
   try {
     const { error: pushError } =
       await supabase.functions.invoke('send-message-push', {
@@ -139,6 +144,7 @@ sendMessage: async (
           message: content,
         },
       });
+      console.log('📡 Ответ send-message-push:', pushError);
 
     if (pushError) {
       console.error(

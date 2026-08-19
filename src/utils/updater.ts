@@ -56,6 +56,11 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
       (asset) => asset.name.toLowerCase().endsWith('.apk')
     );
 
+    console.log('🔎 UPDATE VERSION CHECK:', {
+  currentVersion,
+  latestVersion,
+  releaseTag: release.tag_name,
+});
     // Если установленная версия уже актуальная — обновление не нужно
     if (!isNewerVersion(latestVersion, currentVersion)) {
         console.log('UPDATE DEBUG: версия уже актуальна');

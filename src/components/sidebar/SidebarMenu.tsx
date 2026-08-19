@@ -61,28 +61,14 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({ isOpen, onClose }) => 
             </Link>
           </li>
           <li>
-            <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] text-[var(--text-primary)] transition">
-              ⚙️ Настройки
-            </button>
-          </li>
-
-          <li className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] transition">
-            <span className="text-[var(--text-primary)]">🌙 Тёмная тема</span>
-            <button
-              onClick={toggleTheme}
-              className={`
-                relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0
-                ${theme === 'dark' ? 'bg-[var(--accent)]' : 'bg-gray-400'}
-              `}
-            >
-              <span
-                className={`
-                  absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform duration-300
-                  ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}
-                `}
-              />
-            </button>
-          </li>
+  <Link
+    to="/settings"
+    onClick={onClose}
+    className="w-full text-left px-4 py-3 rounded-lg hover:bg-[var(--bg-input)] text-[var(--text-primary)] transition block"
+  >
+    ⚙️ Настройки
+  </Link>
+</li>
         </ul>
 
         <button

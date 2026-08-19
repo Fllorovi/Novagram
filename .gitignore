@@ -36,6 +36,7 @@ ios/
 .env.local
 .env.production
 .env.development
+firebase.env
 
 # OS files
 Thumbs.db
